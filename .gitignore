@@ -1,0 +1,11 @@
+node_modules/
+.env
+dev.db
+logs.txt
+server_err.txt
+server_out.txt
+package-lock.json
+tmp/
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Agent {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("AGENT") // AGENT, ADMIN
+  orders       Order[]
+  createdAt    DateTime @default(now())
+}
+
+model Client {
+  id           String    @id @default(uuid())
+  customId     String?   @unique // Mijoz ID-si, e.g., 3M1085
+  name         String
+  phone        String?   // Telefon raqami
+  address      String?   // Manzil
+  creditLimit  Float     @default(10000) // Default in USD
+  currentDebt  Float     @default(0)    // In USD
+  status       String    @default("ACTIVE") // ACTIVE, BLACKLIST
+  telegramGroupId String?
+  telegramUserId  String?   // Telegram User ID (from bot start)
+  orders       Order[]
+  payments     Payment[]
+  lateCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Product {
+  id           String      @id @default(uuid())
+  code         String?     @unique
+  name         String
+  group        String?
+  guarantee    String?
+  costPrice    Float       // Tannarx in USD
+  sellPrice    Float       // Sotish narxi in USD
+  stock        Int         @default(0)
+  minStock     Int         @default(0)
+  orderItems   OrderItem[]
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  orderNumber  Int?        @unique // Buyurtma raqami
+  clientId     String
+  client       Client      @relation(fields: [clientId], references: [id])
+  agentId      String
+  agent        Agent       @relation(fields: [agentId], references: [id])
+  driverPhone  String?     // Mashina telefon raqami
+  amount       Float       // Top amount in USD
+  status       String      @default("PENDING") // PENDING, CONFIRMED, FULFILLED, PAID, CANCELLED
+  isDebt       Boolean     @default(false)
+  approvedBy   String?     // Admin who approved
+  approvedAt   DateTime?
+  coordinates  String?
+  paymentMethod String?    // USD, UZS, CARD, BANK
+  due_date     DateTime?
+  isLateProcessed Boolean @default(false)
+  
+  items        OrderItem[]
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id])
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int
+  price        Float    // Selling price per item
+}
+
+model Payment {
+  id           String   @id @default(uuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id])
+  orderId      String?  // Optional: link to a specific order
+  amount       Float    // USD equivalent
+  paymentMethod String  @default("USD") // USD, UZS, CARD, TRANSFER
+  originalAmount Float? // If paid in UZS, original amount might be 12,000,000
+  exchangeRate   Float? 
+  date         DateTime @default(now())
+  notes        String?
+  receiptUrl   String?  // Kvitansiya fayl manzili
+  status       String   @default("WAITING_APPROVAL") // WAITING_APPROVAL, CONFIRMED, REJECTED
+  approvedBy   String?
+  approvedAt   DateTime?
+}
+
+model Log {
+  id           String   @id @default(uuid())
+  action       String   
+  actorId      String?  
+  actorRole    String?
+  metadata     String?  
+  timestamp    DateTime @default(now())
+}
