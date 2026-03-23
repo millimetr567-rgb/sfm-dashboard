@@ -44,13 +44,16 @@ module.exports = async function (fastify, opts) {
       }
     }
 
+    const parsedLimit = parseFloat(creditLimit);
+    const finalLimit = isNaN(parsedLimit) ? 0 : parsedLimit;
+
     return fastify.prisma.client.create({
       data: {
         customId: generatedId || null,
         name,
         phone: phone || null,
         address: address || null,
-        creditLimit: creditLimit !== undefined ? parseFloat(creditLimit) : 10000.0,
+        creditLimit: finalLimit,
         telegramGroupId: telegramGroupId || null
       }
     })

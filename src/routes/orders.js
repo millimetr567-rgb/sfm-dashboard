@@ -67,6 +67,7 @@ module.exports = async function (fastify, opts) {
       return order
     })
 
+    await fastify.telegram.sendOrderNotification(result)
     return result
   })
 
@@ -79,7 +80,12 @@ module.exports = async function (fastify, opts) {
         where: { id },
         include: { client: true, items: true }
     })
-    if (!order || order.status !== 'WAITING_APPROVAL') return reply.code(400).send({ error: 'Tasdiqlash kutilmayapti' })
+    
+    // Accept WAITING_APPROVAL, PENDING_PAYMENT, or PENDING_APPROVAL status for confirmation
+    const allowed = ['WAITING_APPROVAL', 'PENDING_PAYMENT', 'PENDING_APPROVAL'];
+    if (!order || !allowed.includes(order.status)) {
+        return reply.code(400).send({ error: 'Bu buyurtmani tasdiqlash imkoniyati yo`q (Holati: ' + (order?.status || 'noma`lum') + ')' })
+    }
 
     return await fastify.prisma.$transaction(async (tx) => {
        const updated = await tx.order.update({
@@ -121,6 +127,23 @@ module.exports = async function (fastify, opts) {
        }
        return updated
     })
+  })
+
+  fastify.put('/:id', async (request, reply) => {
+    if (request.user.role !== 'ADMIN') return reply.code(403).send({ error: 'Ruxsat yo\'q' })
+    const { id } = request.params
+    const { amount, status, driverPhone, due_date } = request.body
+
+    const updated = await fastify.prisma.order.update({
+      where: { id },
+      data: {
+        amount: amount !== undefined ? parseFloat(amount) : undefined,
+        status: status || undefined,
+        driverPhone: driverPhone || undefined,
+        due_date: due_date ? new Date(due_date) : undefined
+      }
+    })
+    return updated
   })
 
   fastify.delete('/:id', async (request, reply) => {

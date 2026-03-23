@@ -6,7 +6,12 @@ class TelegramService {
   constructor() {
     this.token = process.env.TELEGRAM_BOT_TOKEN
     this.bot = this.token ? new TelegramBot(this.token, { polling: true }) : null
-    if (this.bot) this.initHandlers()
+    if (this.bot) {
+      this.initHandlers()
+      const stopBot = () => this.bot.stopPolling().catch(() => {});
+      process.on('SIGINT', stopBot);
+      process.on('SIGTERM', stopBot);
+    }
   }
 
   setFastify(fastify) { this.fastify = fastify }
@@ -21,9 +26,11 @@ class TelegramService {
       const cid = message.chat.id
       const mid = message.message_id
       if (data.startsWith('confirm_order_')) {
-          // Normal confirmation (maybe not used anymore as per new flow)
-      } else if (data.startsWith('admin_approve_')) {
-          await this.handleAdminDecision(data.replace('admin_approve_', ''), cid, mid, from, 'approve')
+          // Deprecated
+      } else if (data.startsWith('admin_approve_order_')) {
+          await this.handleOrderDecision(data.replace('admin_approve_order_', ''), cid, mid, from, 'approve')
+      } else if (data.startsWith('admin_reject_order_')) {
+          await this.handleOrderDecision(data.replace('admin_reject_order_', ''), cid, mid, from, 'reject')
       } else if (data.startsWith('approve_pay_')) {
           await this.handlePaymentDecision(data.replace('approve_pay_', ''), cid, mid, from, 'approve')
       } else if (data.startsWith('reject_pay_')) {
@@ -105,14 +112,90 @@ class TelegramService {
   }
 
   async sendOrderNotification(order) {
-    const tid = order.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+    const tid = order.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID || '-1002444535352'; // Use env or default
     if (!this.bot || !tid) return;
     try {
+      // 1. Generate PDF
       const pdf = await this.generateOrderPDF(order);
-      await this.bot.sendDocument(tid, pdf, { filename: `Order_${order.id.substring(0,6)}.pdf` });
-      let text = `📦 *BUYURTMA YARATILDI*\n\n🆔 Raqam: \`#${order.orderNumber || order.id.substring(0,8)}\`\n👤 Mijoz: *${order.client.name}*\n💵 Summa: *${order.amount.toFixed(2)} $*\n📊 Holat: TO'LOV KUTILMOQDA`;
-      await this.bot.sendMessage(tid, text, { parse_mode: 'Markdown' });
+      
+      // 2. Send PDF first
+      await this.bot.sendDocument(tid, pdf, { 
+        caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
+        filename: `Order_${order.id.substring(0,6)}.pdf` 
+      });
+
+      // 3. Send Message with Approval Buttons
+      let text = `📦 *YANGI BUYURTMA YARATILDI*\n\n` +
+                 `🆔 Raqam: \`#${order.orderNumber || order.id.substring(0,8)}\`\n` +
+                 `👤 Mijoz: *${order.client.name}*\n` +
+                 `💵 Jami: *${order.amount.toFixed(2)} $*\n` +
+                 `👤 Agent: ${order.agent?.username || '—'}\n` +
+                 `📊 Holat: *TASDIQ KUTILMOQDA*`;
+
+      const opts = {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Tasdiqlash', callback_query_id: 'approve', callback_data: `admin_approve_order_${order.id}` },
+              { text: '❌ Bekor qilish', callback_query_id: 'reject', callback_data: `admin_reject_order_${order.id}` }
+            ]
+          ]
+        }
+      };
+
+      await this.bot.sendMessage(tid, text, opts);
     } catch (e) { console.error('Notify Error:', e.message) }
+  }
+
+  async handleOrderDecision(id, cid, mid, from, type) {
+    if (!this.fastify) return;
+    const adminName = from.username || from.first_name || 'Admin';
+    try {
+      if (type === 'approve') {
+        // Find order
+        const order = await this.fastify.prisma.order.findUnique({ 
+            where: { id },
+            include: { items: true, client: true }
+        });
+        
+        if (!order || order.status === 'CONFIRMED') return;
+
+        // Transactional update
+        await this.fastify.prisma.$transaction(async (tx) => {
+            await tx.order.update({
+                where: { id },
+                data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() }
+            });
+            await tx.client.update({
+                where: { id: order.clientId },
+                data: { currentDebt: { increment: order.amount } }
+            });
+        });
+
+        await this.bot.editMessageText(`✅ *TASDIQLANDI*\nBuyurtma: #${order.orderNumber || order.id.substring(0,8)}\nMijoz: ${order.client.name}\nAdmin: ${adminName}`, { 
+          chat_id: cid, 
+          message_id: mid,
+          parse_mode: 'Markdown'
+        });
+      } else {
+        const order = await this.fastify.prisma.order.update({
+          where: { id },
+          data: { status: 'CANCELLED' },
+          include: { items: true, client: true }
+        });
+        
+        // Return stock
+        for (const i of order.items) {
+          await this.fastify.prisma.product.update({
+            where: { id: i.productId },
+            data: { stock: { increment: i.quantity } }
+          });
+        }
+
+        await this.bot.editMessageText(`❌ *BEKOR QILINDI*\nBy: ${adminName}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
+      }
+    } catch (e) { console.error('Order Decision Error:', e.message) }
   }
 }
 
