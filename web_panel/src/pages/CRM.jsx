@@ -18,6 +18,7 @@ export default function CRM() {
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
+  const [newLimit, setNewLimit] = useState(10000);
 
   const [selectedClient, setSelectedClient] = useState(null);
   const [history, setHistory] = useState({ orders: [], payments: [] });
@@ -49,13 +50,20 @@ export default function CRM() {
     if (!newName) return alert("Nomi kiritilishi shart!");
     try {
       await axios.post(`${API_URL}/clients`, {
-        customId: newId || null, name: newName, phone: newPhone || '', address: newAddress || ''
+        customId: newId || null, 
+        name: newName, 
+        phone: newPhone || '', 
+        address: newAddress || '',
+        creditLimit: parseFloat(newLimit) || 0
       });
       alert('Mijoz saqlandi');
       fetchClients();
       setShowAdd(false);
-      setNewId(''); setNewName(''); setNewPhone(''); setNewAddress('');
-    } catch (e) { alert("Xato"); }
+      setNewId(''); setNewName(''); setNewPhone(''); setNewAddress(''); setNewLimit(10000);
+    } catch (e) { 
+      const msg = e.response?.data?.error || "Xato yuz berdi";
+      alert(msg); 
+    }
   };
 
   const deleteClient = (e, id) => {
@@ -109,6 +117,7 @@ export default function CRM() {
             <div className="form-group"><label>F.I.O / Nomi *</label><input type="text" className="form-control" value={newName} onChange={e => setNewName(e.target.value)} required /></div>
             <div className="form-group"><label>Telefon</label><input type="text" className="form-control" value={newPhone} onChange={e => setNewPhone(e.target.value)} /></div>
             <div className="form-group"><label>Manzil</label><input type="text" className="form-control" value={newAddress} onChange={e => setNewAddress(e.target.value)} /></div>
+            <div className="form-group"><label>Qarz Limiti ($)</label><input type="number" className="form-control" value={newLimit} onChange={e => setNewLimit(e.target.value)} /></div>
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{t('action_save')}</button>
               <button type="button" onClick={() => setShowAdd(false)} className="btn btn-secondary">{t('action_cancel')}</button>
@@ -133,8 +142,10 @@ export default function CRM() {
               </div>
               <div style={{ textAlign: 'right', display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mijoz Balansi</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: c.currentDebt > 0 ? 'var(--danger)' : 'var(--success)' }}>${c.currentDebt?.toLocaleString()}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mijoz Balansi / Limit</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: c.currentDebt > c.creditLimit ? 'var(--danger)' : c.currentDebt > 0 ? 'var(--warning)' : 'var(--success)' }}>
+                    ${c.currentDebt?.toLocaleString()} <small style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>/ ${c.creditLimit?.toLocaleString()}</small>
+                  </div>
                 </div>
                 {isAdmin && <button onClick={(e) => deleteClient(e, c.id)} style={{ color: 'var(--danger)', background: 'transparent' }}><Trash2 size={18}/></button>}
               </div>

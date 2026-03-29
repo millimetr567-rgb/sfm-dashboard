@@ -16,6 +16,7 @@ export default function CashRegister() {
   const [uzsAmount, setUzsAmount] = useState('');
   const [kurs, setKurs] = useState(localStorage.getItem('kurs') || '12800');
   const [method, setMethod] = useState('USD (Naqd)');
+  const [exchangeRateSaving, setExchangeRateSaving] = useState(false);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -25,8 +26,13 @@ export default function CashRegister() {
 
   useEffect(() => { 
     fetchData(); 
+  }, []);
+
+  const saveKurs = () => {
     localStorage.setItem('kurs', kurs);
-  }, [kurs]);
+    setExchangeRateSaving(true);
+    setTimeout(() => setExchangeRateSaving(false), 2000);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -94,10 +100,10 @@ export default function CashRegister() {
 
   const confirmedPayments = payments.filter(p => p.status === 'CONFIRMED');
   const stats = {
-    usd: confirmedPayments.filter(p => p.paymentMethod === 'USD (Naqd)').reduce((a, b) => a + b.amount, 0),
-    uzs: confirmedPayments.filter(p => p.paymentMethod === 'UZS (Naqd)').reduce((a, b) => a + b.amount, 0),
-    card: confirmedPayments.filter(p => p.paymentMethod === 'CARD (Terminal)').reduce((a, b) => a + b.amount, 0),
-    bank: confirmedPayments.filter(p => p.paymentMethod === 'BANK (O\'tkazma)').reduce((a, b) => a + b.amount, 0),
+    usd: confirmedPayments.filter(p => p.paymentMethod?.includes('USD')).reduce((a, b) => a + b.amount, 0),
+    uzs: confirmedPayments.filter(p => p.paymentMethod?.includes('UZS')).reduce((a, b) => a + b.amount, 0),
+    card: confirmedPayments.filter(p => p.paymentMethod?.includes('CARD') || p.paymentMethod?.includes('KARTA') || p.paymentMethod?.includes('Terminal')).reduce((a, b) => a + b.amount, 0),
+    bank: confirmedPayments.filter(p => p.paymentMethod?.includes('BANK') || p.paymentMethod?.includes('TRANSFER')).reduce((a, b) => a + b.amount, 0),
   };
 
   return (
@@ -107,8 +113,11 @@ export default function CashRegister() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', padding: '6px 15px', borderRadius: '15px', border: '1px solid var(--primary)' }}>
            <ArrowRightLeft size={16} color="var(--primary)"/>
            <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Kurs:</span>
-           <input type="number" className="form-control" style={{ width: '85px', border: 'none', background: 'transparent', fontWeight: 'bold', color: 'var(--primary)' }} value={kurs} onChange={e => setKurs(e.target.value)} />
-           <span style={{ fontSize: '0.8rem' }}>UZS</span>
+           <input type="number" className="form-control" style={{ width: '85px', border: 'none', background: 'transparent', fontWeight: 'bold', color: 'var(--primary)', padding: '0' }} value={kurs} onChange={e => setKurs(e.target.value)} />
+           <span style={{ fontSize: '0.8rem', marginRight: '5px' }}>UZS</span>
+           <button onClick={saveKurs} className="btn-icon" style={{ width: '28px', height: '28px', background: exchangeRateSaving ? 'var(--success)' : 'var(--primary)', color: 'white' }}>
+              {exchangeRateSaving ? <CheckCircle size={14}/> : <Plus size={14}/>}
+           </button>
         </div>
       </div>
 
@@ -122,11 +131,11 @@ export default function CashRegister() {
           <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.uzs.toLocaleString()}</div>
         </div>
         <div className="card glass-panel" style={{ borderBottom: '3px solid var(--warning)' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>CARD / TERMINAL</div>
+          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>KARTA / PAYME / CLICK</div>
           <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.card.toLocaleString()}</div>
         </div>
         <div className="card glass-panel" style={{ borderBottom: '3px solid #6366f1' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>BANK / TRANSFER</div>
+          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>BANK O'TKAZMALARI</div>
           <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.bank.toLocaleString()}</div>
         </div>
       </div>
@@ -149,8 +158,8 @@ export default function CashRegister() {
               <select className="form-control" value={method} onChange={e => setMethod(e.target.value)}>
                 <option value="USD (Naqd)">USD (Naqd)</option>
                 <option value="UZS (Naqd)">UZS (Naqd)</option>
-                <option value="CARD (Terminal)">CARD (Terminal)</option>
-                <option value="BANK (O'tkazma)">BANK (O'tkazma)</option>
+                <option value="KARTA (Payme/Click)">KARTA (Payme/Click)</option>
+                <option value="BANK (Bank o'tkazmalari)">BANK (Bank o'tkazmalari)</option>
               </select>
             </div>
 
@@ -158,10 +167,12 @@ export default function CashRegister() {
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Summa ($)</label>
                 <input type="number" step="0.01" className="form-control" value={amount} onChange={e => { setAmount(e.target.value); setUzsAmount((e.target.value * kurs).toFixed(0)); }} placeholder="Dollarda" />
+                {amount > 0 && <div style={{ fontSize: '0.75rem', marginTop: '5px', color: 'var(--primary)', fontWeight: '500' }}>≈ {(amount * kurs).toLocaleString()} so'm</div>}
               </div>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Variant: UZS</label>
                 <input type="number" className="form-control" value={uzsAmount} onChange={e => { setUzsAmount(e.target.value); setAmount((e.target.value / kurs).toFixed(2)); }} placeholder="So'mda" />
+                {uzsAmount > 0 && <div style={{ fontSize: '0.75rem', marginTop: '5px', color: 'var(--success)', fontWeight: '500' }}>≈ {(uzsAmount / kurs).toFixed(2)} dollar</div>}
               </div>
             </div>
 

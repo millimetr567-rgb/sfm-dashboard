@@ -137,40 +137,44 @@ export default function Products() {
       )}
 
       {loading ? <div style={{ textAlign: 'center', padding: '40px' }}>{t('loading')}</div> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-          {groups.map(g => (
-            <div key={g}>
-               <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', color: 'var(--primary)', borderBottom: '1px solid rgba(99,102,241,0.2)', paddingBottom: '10px' }}>
-                  <LayoutGrid size={20}/> {g} <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({grouped[g].length})</small>
-               </h3>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '10px' }}>
-                  {grouped[g].map(p => (
-                    <div 
-                      key={p.id} 
-                      className="card" 
-                      style={{ padding: '0', cursor: 'pointer', border: selectedProductId === p.id ? '1px solid var(--primary)' : '1px solid var(--border-color)' }}
-                      onClick={() => setSelectedProductId(selectedProductId === p.id ? null : p.id)}
-                    >
-                      <div style={{ padding: '12px 15px' }}>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{p.name}</div>
-                            {isAdmin && (
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={(e) => { e.stopPropagation(); setEditProduct(p); }} style={{ color: 'var(--primary)', background: 'transparent' }}><Edit2 size={13}/></button>
-                                <button onClick={(e) => deleteProduct(e, p.id)} style={{ color: 'var(--danger)', background: 'transparent' }}><Trash2 size={13}/></button>
-                              </div>
-                            )}
-                         </div>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--accent)' }}>${p.sellPrice || 0}</div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: p.stock <= p.minStock ? 'var(--danger)' : 'var(--success)' }}>{p.stock} dona</div>
-                         </div>
+        <div className="table-container card" style={{ padding: '0' }}>
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Mahsulot Nomi</th>
+                <th>Guruh</th>
+                <th>Kod</th>
+                <th>Sklad</th>
+                <th>Tannarx ($)</th>
+                <th>Sotish ($)</th>
+                {isAdmin && <th>Amallar</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(p => (
+                <tr key={p.id} onClick={() => setSelectedProductId(p.id)} style={{ background: selectedProductId === p.id ? 'rgba(99,102,241,0.05)' : 'transparent', cursor: 'pointer' }}>
+                  <td><div style={{ fontWeight: '600' }}>{p.name}</div></td>
+                  <td>{p.group || '—'}</td>
+                  <td><code style={{ fontSize: '0.8rem', opacity: 0.7 }}>{p.code || '—'}</code></td>
+                  <td>
+                    <span className={`badge ${p.stock <= p.minStock ? 'badge-danger' : 'badge-success'}`}>
+                      {p.stock} dona
+                    </span>
+                  </td>
+                  <td>${p.costPrice}</td>
+                  <td><b style={{ color: 'var(--primary)' }}>${p.sellPrice}</b></td>
+                  {isAdmin && (
+                    <td>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={(e) => { e.stopPropagation(); setEditProduct(p); }} style={{ color: 'var(--primary)' }}><Edit2 size={16}/></button>
+                        <button onClick={(e) => deleteProduct(e, p.id)} style={{ color: 'var(--danger)' }}><Trash2 size={16}/></button>
                       </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-          ))}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       {filtered.length === 0 && !loading && <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Mahsulot topilmadi.</div>}

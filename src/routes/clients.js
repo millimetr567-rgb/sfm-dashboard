@@ -32,15 +32,18 @@ module.exports = async function (fastify, opts) {
   fastify.post('/', async (request, reply) => {
     const { name, phone, address, creditLimit, telegramGroupId, customId } = request.body
     
-    let generatedId = customId;
+    let generatedId = (customId && customId.trim()) ? customId.trim() : null;
+    
     if (!generatedId) {
-      for (let i = 0; i < 5; i++) {
+      let attempts = 0;
+      while (attempts < 10) {
         const temp = 'MID-' + Math.floor(1000 + Math.random() * 9000);
-        const existing = await fastify.prisma.client.findUnique({ where: { customId: temp } })
+        const existing = await fastify.prisma.client.findFirst({ where: { customId: temp } })
         if (!existing) {
           generatedId = temp;
           break;
         }
+        attempts++;
       }
     }
 
