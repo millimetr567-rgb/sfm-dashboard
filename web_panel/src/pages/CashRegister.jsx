@@ -100,10 +100,10 @@ export default function CashRegister() {
 
   const confirmedPayments = payments.filter(p => p.status === 'CONFIRMED');
   const stats = {
-    usd: confirmedPayments.filter(p => p.paymentMethod?.includes('USD')).reduce((a, b) => a + b.amount, 0),
-    uzs: confirmedPayments.filter(p => p.paymentMethod?.includes('UZS')).reduce((a, b) => a + b.amount, 0),
-    card: confirmedPayments.filter(p => p.paymentMethod?.includes('CARD') || p.paymentMethod?.includes('KARTA') || p.paymentMethod?.includes('Terminal')).reduce((a, b) => a + b.amount, 0),
-    bank: confirmedPayments.filter(p => p.paymentMethod?.includes('BANK') || p.paymentMethod?.includes('TRANSFER')).reduce((a, b) => a + b.amount, 0),
+    usd: confirmedPayments.filter(p => p.paymentMethod?.includes('USD')).reduce((a, b) => a + (b.amount || 0), 0),
+    uzs: confirmedPayments.filter(p => p.paymentMethod?.includes('UZS')).reduce((a, b) => a + (b.amount || 0), 0),
+    card: confirmedPayments.filter(p => p.paymentMethod?.includes('CARD') || p.paymentMethod?.includes('KARTA') || p.paymentMethod?.includes('Terminal')).reduce((a, b) => a + (b.amount || 0), 0),
+    bank: confirmedPayments.filter(p => p.paymentMethod?.includes('BANK') || p.paymentMethod?.includes('TRANSFER')).reduce((a, b) => a + (b.amount || 0), 0),
   };
 
   return (

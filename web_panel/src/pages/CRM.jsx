@@ -95,17 +95,18 @@ export default function CRM() {
     String(c.name || '').toLowerCase().includes(search.toLowerCase()) || 
     (c.customId && c.customId.includes(search))
   );
+  const sortedClientsByDebt = [...filtered].sort((a,b) => (b.currentDebt || 0) - (a.currentDebt || 0));
 
   return (
     <div className="animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
-        <h2>👥 {t('crm')}</h2>
-        <div style={{ display: 'flex', gap: '15px' }}>
-          <div style={{ position: 'relative', width: '250px' }}>
-            <Search size={18} style={{ position: 'absolute', top: '12px', left: '15px', color: 'var(--text-muted)' }} />
-            <input type="text" className="form-control" placeholder={t('search')} style={{ paddingLeft: '45px', borderRadius: '25px' }} value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button onClick={() => setShowAdd(!showAdd)} className="btn btn-primary"><Plus size={18} /> {t('add_new')}</button>
+        <h2>👥 {t('crm')} <small style={{ color: 'var(--text-muted)' }}>({clients.length})</small></h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+           <div style={{ position: 'relative', width: '220px' }}>
+             <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
+             <input type="text" className="form-control" style={{ paddingLeft: '35px', borderRadius: '20px', height: '36px', fontSize: '0.85rem' }} placeholder={t('search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+           </div>
+           <button onClick={() => setShowAdd(!showAdd)} className="btn btn-primary" style={{ padding: '8px 15px', fontSize: '0.85rem' }}><Plus size={16}/> {t('add_new')}</button>
         </div>
       </div>
 

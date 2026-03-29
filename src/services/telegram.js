@@ -67,6 +67,14 @@ class TelegramService {
       } catch (e) { console.error('Payment Decision Error:', e.message) }
   }
 
+  async broadcastToAdmins(msg) {
+    const adminId = process.env.ADMIN_GROUP_ID || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+    if (!this.bot || !adminId) return;
+    try {
+      await this.bot.sendMessage(adminId, msg, { parse_mode: 'Markdown' });
+    } catch (e) { console.error('Broadcast Error:', e.message); }
+  }
+
   async sendPaymentNotification(p, c, u) {
     const tid = c.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
     if (!this.bot || !tid) return;
