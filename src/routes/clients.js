@@ -35,16 +35,12 @@ module.exports = async function (fastify, opts) {
     let generatedId = (customId && customId.trim()) ? customId.trim() : null;
     
     if (!generatedId) {
-      let attempts = 0;
-      while (attempts < 10) {
-        const temp = 'MID-' + Math.floor(1000 + Math.random() * 9000);
-        const existing = await fastify.prisma.client.findFirst({ where: { customId: temp } })
-        if (!existing) {
-          generatedId = temp;
-          break;
-        }
-        attempts++;
-      }
+      // More robust ID generation avoiding collisions
+      generatedId = 'MID-' + Date.now().toString().slice(-4) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    }
+    
+    if (!name || !name.trim()) {
+      return reply.code(400).send({ error: 'Mijoz ismini kiritish shart' });
     }
 
     const parsedLimit = parseFloat(creditLimit);

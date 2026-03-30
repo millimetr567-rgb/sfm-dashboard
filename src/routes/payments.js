@@ -83,19 +83,30 @@ module.exports = async function (fastify, opts) {
             data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() }
         })
 
-        // 2. Update Client Debt
+        // 2. Update Order if linked - and handle Debt safely
+        if (payment.orderId) {
+            const relatedOrder = await tx.order.findUnique({ where: { id: payment.orderId } })
+            if (relatedOrder) {
+                // If it was never added to debt (still pending), add it now
+                if (['WAITING_APPROVAL', 'PENDING_PAYMENT', 'PENDING_APPROVAL'].includes(relatedOrder.status)) {
+                    await tx.client.update({
+                        where: { id: payment.clientId },
+                        data: { currentDebt: { increment: relatedOrder.amount } }
+                    })
+                }
+                
+                await tx.order.update({
+                    where: { id: payment.orderId },
+                    data: { status: 'PAID', paymentMethod: payment.paymentMethod }
+                })
+            }
+        }
+
+        // 3. Update Client Debt (always apply payment credit)
         await tx.client.update({
             where: { id: payment.clientId },
             data: { currentDebt: { decrement: payment.amount } }
         })
-
-        // 3. Update Order if linked
-        if (payment.orderId) {
-            await tx.order.update({
-                where: { id: payment.orderId },
-                data: { status: 'PAID', paymentMethod: payment.paymentMethod }
-            })
-        }
 
         return updated
     })

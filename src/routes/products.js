@@ -58,14 +58,14 @@ module.exports = async function (fastify, opts) {
       }
 
       const code = p.code || null
-      const group = p.group || currentGroupName // Use explicit group or current header
+      const group = p.group || currentGroupName
       const guarantee = p.guarantee || null
       const cost = parseFloat(p.costPrice) || 0
       const sell = parseFloat(p.sellPrice) || 0
       const stock = parseInt(p.stock, 10) || 0
       const minStock = parseInt(p.minStock, 10) || 0
       const productName = String(p.name || '').trim();
-      const productCode = (code !== undefined && code !== null && code !== '') ? String(code) : null;
+      const productCode = (code !== undefined && code !== null && String(code).trim() !== '') ? String(code).trim() : null;
       const groupName = group ? String(group).trim() : 'Boshqa';
 
       // Skip Excel header rows if they ended up in data

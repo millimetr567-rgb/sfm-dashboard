@@ -61,14 +61,24 @@ export default function Products() {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        const normalized = data.map(row => ({
-          code: row['Kodi'] || row['Код'] || null,
-          name: row['Nomi'] || row['Наименование'],
-          group: row['Guruh'] || row['Группа'] || 'Boshqa',
-          costPrice: parseFloat(row['Tannarx'] || row['Себестоимость']) || 0,
-          sellPrice: parseFloat(row['Sotish'] || row['Цена']) || 0,
-          stock: parseInt(row['Sklad'] || row['Остаток']) || 0
-        }));
+        const normalized = data.map(row => {
+          const findKey = (keys) => {
+            const rowKeys = Object.keys(row);
+            for(let paramKey of keys) {
+               const found = rowKeys.find(k => k.trim().toLowerCase() === paramKey.toLowerCase());
+               if (found) return row[found];
+            }
+            return null;
+          };
+          return {
+            code: findKey(['kodi', 'код']) || null,
+            name: findKey(['nomi', 'наименование']),
+            group: findKey(['guruh', 'группа']) || 'Boshqa',
+            costPrice: parseFloat(findKey(['tannarx', 'себестоимость'])) || 0,
+            sellPrice: parseFloat(findKey(['sotish', 'цена'])) || 0,
+            stock: parseInt(findKey(['sklad', 'остаток'])) || 0
+          };
+        });
         await axios.post(`${API_URL}/products/bulk`, { products: normalized });
         fetchProducts();
         alert("Tayyor!");
