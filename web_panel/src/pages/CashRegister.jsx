@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/LanguageContext';
-import { Banknote, List, Filter, DollarSign, CreditCard, Building2, Coins, ArrowRightLeft, ShoppingCart, CheckCircle, XCircle } from 'lucide-react';
+import { Banknote, List, Filter, DollarSign, CreditCard, Building2, Coins, ArrowRightLeft, ShoppingCart, CheckCircle, XCircle, Plus } from 'lucide-react';
 
 export default function CashRegister() {
   const [payments, setPayments] = useState([]);

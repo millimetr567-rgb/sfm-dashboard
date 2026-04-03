@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "dev": "node --watch-path=src src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "test": "echo \"Error: no test specified\" && exit 1"

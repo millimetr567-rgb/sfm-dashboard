@@ -1,0 +1,6 @@
+﻿c25dbd9 fix(core): kassa double-entry bug, robust bulk products import, and resolve client customId generation loop stability
+b1e9300 fix(vps): fix prisma for vps and robust stats
+38ae918 Fix customer addition + add credit limit + update kassa exchange rate conversion + restore products table UI
+9ea35aa Final Polished Release: Full features, multi-language, theme support, PDF, Telegram Bot, and CRM enhancements
+df9e9a2 Add requirements.txt for Streamlit deployment
+10093d6 first commit: Initial project setup with .gitignore

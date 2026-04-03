@@ -1,12 +1,8 @@
 require('dotenv').config()
 const { PrismaClient } = require('@prisma/client')
-const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
-const sqlite = require('better-sqlite3')
 const bcrypt = require('bcryptjs')
 
-const url = process.env.DATABASE_URL || "file:./dev.db"
-const adapter = new PrismaBetterSqlite3({ url })
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
 
 async function main() {
   const username = 'admin'

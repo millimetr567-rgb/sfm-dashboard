@@ -1,0 +1,115 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ≡ƒñû agentic secret storage: https://dotenvx.com/as2
+node : D:\Agent\node_modul
+es\@prisma\client\runtime\
+library.js:125
+At line:1 char:1
++ node src/seed.js 2>&1 | 
+Out-File -Encoding utf8 
+seed_out.txt
++ ~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (D  
+  :\Agent\node_m...\lib   
+ rary.js:125:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+It should have this form: 
+{ url: 
+"CONNECTION_STRING" }`)}}}
+},adapter:(e,t)=>{if(!e&&h
+t(t.generator)==="client")
+throw new N('Using engine 
+type "client" requires a 
+driver adapter to be 
+provided to PrismaClient c
+onstructor.');if(e===null)
+return;if(e===void 
+0)throw new N('"adapter" 
+property must not be 
+undefined, use null to 
+conditionally disable 
+driver adapters.');if(!$n(
+t).includes("driverAdapter
+s"))throw new 
+N('"adapter" property can 
+only be provided to 
+PrismaClient constructor 
+when "driverAdapters" 
+preview feature is enabled
+.');if(ht(t.generator)==="
+binary")throw new 
+N('Cannot use a driver 
+adapter with the "binary" 
+Query Engine. Please use 
+the "library" Query Engine
+.')},datasourceUrl:e=>{if(
+typeof e<"u"&&typeof 
+e!="string")throw new 
+N(`Invalid value 
+${JSON.stringify(e)} for 
+"datasourceUrl" provided 
+to PrismaClient 
+constructor.
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+           ^
+
+PrismaClientConstructorVal
+idationError: "adapter" 
+property can only be 
+provided to PrismaClient 
+constructor when 
+"driverAdapters" preview 
+feature is enabled.
+Read more at https://pris.
+ly/d/client-constructor
+    at Object.adapter (D:\
+Agent\node_modules\@prisma
+\client\runtime\library.js
+:125:408)
+    at tu (D:\Agent\node_m
+odules\@prisma\client\runt
+ime\library.js:126:2527)
+    at new t (D:\Agent\nod
+e_modules\@prisma\client\r
+untime\library.js:130:775)
+    at Object.<anonymous> 
+(D:\Agent\src\seed.js:9:16
+)
+    at Module._compile (no
+de:internal/modules/cjs/lo
+ader:1804:14)
+    at Object..js (node:in
+ternal/modules/cjs/loader:
+1936:10)
+    at Module.load (node:i
+nternal/modules/cjs/loader
+:1525:32)
+    at Module._load (node:
+internal/modules/cjs/loade
+r:1327:12)
+    at 
+TracingChannel.traceSync (
+node:diagnostics_channel:3
+28:14)
+    at wrapModuleLoad (nod
+e:internal/modules/cjs/loa
+der:245:24)
+
+Node.js v24.13.1

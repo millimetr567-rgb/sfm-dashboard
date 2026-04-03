@@ -16,12 +16,12 @@ module.exports = async function (fastify, opts) {
 
     const product = await fastify.prisma.product.create({
       data: {
-        code: code || null,
+        code: code ? String(code).trim() : null,
         name, group, guarantee,
         costPrice: parseFloat(costPrice) || 0,
         sellPrice: parseFloat(sellPrice) || 0,
-        stock: parseInt(stock, 10) || 0,
-        minStock: parseInt(minStock, 10) || 0
+        stock: parseFloat(stock) || 0,
+        minStock: parseFloat(minStock) || 0
       }
     })
     return product
@@ -62,8 +62,8 @@ module.exports = async function (fastify, opts) {
       const guarantee = p.guarantee || null
       const cost = parseFloat(p.costPrice) || 0
       const sell = parseFloat(p.sellPrice) || 0
-      const stock = parseInt(p.stock, 10) || 0
-      const minStock = parseInt(p.minStock, 10) || 0
+      const stock = parseFloat(p.stock) || 0
+      const minStock = parseFloat(p.minStock) || 0
       const productName = String(p.name || '').trim();
       const productCode = (code !== undefined && code !== null && String(code).trim() !== '') ? String(code).trim() : null;
       const groupName = group ? String(group).trim() : 'Boshqa';
@@ -110,10 +110,22 @@ module.exports = async function (fastify, opts) {
   // Delete All Products (Admin only)
   fastify.delete('/', async (request, reply) => {
     if (request.user.role !== 'ADMIN') return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
-    // We cannot delete products being used in OrderItems easily without cascade.
-    // But for a clean start, we can delete them.
-    const deleted = await fastify.prisma.product.deleteMany({})
-    return { count: deleted.count }
+    try {
+      // Deep clean to allow deleting products
+      await fastify.prisma.payment.deleteMany({});
+      await fastify.prisma.orderItem.deleteMany({});
+      await fastify.prisma.order.deleteMany({});
+      
+      const deleted = await fastify.prisma.product.deleteMany({})
+      
+      // Reset client stats
+      await fastify.prisma.client.updateMany({ data: { currentDebt: 0, totalPurchases: 0 } });
+      
+      return { count: deleted.count, message: "Keskin tozalash: Barcha mahsulotlar hamda eski savdo/qarz tarixi butunlay o'chirildi!" }
+    } catch(err) {
+      console.log(err);
+      return reply.code(500).send({ error: "O'chirishning imkoni bo'lmadi." })
+    }
   })
 
   // Update Single Product (Admin only)
@@ -125,11 +137,12 @@ module.exports = async function (fastify, opts) {
     const updated = await fastify.prisma.product.update({
       where: { id },
       data: {
-        code, name, group, guarantee,
+        code: code ? String(code).trim() : null,
+        name, group, guarantee,
         costPrice: parseFloat(costPrice) || 0,
         sellPrice: parseFloat(sellPrice) || 0,
-        stock: parseInt(stock, 10) || 0,
-        minStock: parseInt(minStock, 10) || 0
+        stock: parseFloat(stock) || 0,
+        minStock: parseFloat(minStock) || 0
       }
     })
 

@@ -25,6 +25,10 @@ module.exports = async function (fastify, opts) {
       const dbProduct = await fastify.prisma.product.findUnique({ where: { id: item.productId } })
       if (!dbProduct) return reply.code(400).send({ error: `Mahsulot topilmadi: ${item.productId}` })
       
+      if (item.quantity > dbProduct.stock) {
+        return reply.code(400).send({ error: `Omborda ${dbProduct.name} mahsulotidan yetarli miqdor yo'q (Skladda: ${dbProduct.stock} ta)` })
+      }
+
       const price = parseFloat(item.price)
       totalAmount += price * item.quantity
       resolvedItems.push({ productId: dbProduct.id, quantity: item.quantity, price: price })

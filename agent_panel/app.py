@@ -442,15 +442,55 @@ def main_app():
             f_up = st.file_uploader("Faylni tanlang", type=['xlsx', 'xls'])
             if f_up:
                 df_up = pd.read_excel(f_up)
-                header_map = {'Kodi':'code', 'Nomi':'name', 'Guruh':'group', 'Tannarx (USD)':'costPrice', 'Sotish (USD)':'sellPrice', 'Sklad':'stock', 'Min Sklad':'minStock'}
                 if st.button("Bazaga saqlash"):
-                    df_up = df_up.rename(columns=header_map)
-                    valid_cols = [v for v in header_map.values() if v in df_up.columns]
-                    data = df_up[valid_cols].to_dict('records')
-                    res = requests.post(f"{API_URL}/products/bulk", json={"products": data}, headers=get_headers())
-                    if res.status_code == 200:
-                        st.success(f"{res.json().get('count')} ta mahsulot yuklandi!"); st.cache_data.clear(); st.rerun()
-                    else: st.error(res.text)
+                    def find_col(possible_names):
+                        for col in df_up.columns:
+                            for p in possible_names:
+                                if p.lower() in str(col).lower():
+                                    return col
+                        return None
+
+                    c_nomi = find_col(['nomi', 'name', 'наименование'])
+                    c_kodi = find_col(['kod', 'код'])
+                    c_guruh = find_col(['guruh', 'группа'])
+                    c_tan = find_col(['tannarx', 'себестоимост'])
+                    c_sotish = find_col(['narx', 'sotish', 'цена'])
+                    c_miqdor = find_col(['miqdor', 'son', 'sklad', 'qoldiq', 'остаток'])
+                    c_zapas = find_col(['min', 'zapas', 'minimum'])
+
+                    if c_nomi:
+                        data = []
+                        inherited_group = 'Boshqa'
+                        for _, row in df_up.iterrows():
+                            name = row[c_nomi] if pd.notna(row[c_nomi]) else None
+                            if not name: continue
+
+                            cost = row[c_tan] if c_tan and pd.notna(row[c_tan]) else 0
+                            sell = row[c_sotish] if c_sotish and pd.notna(row[c_sotish]) else 0
+                            stock = row[c_miqdor] if c_miqdor and pd.notna(row[c_miqdor]) else 0
+                            code = row[c_kodi] if c_kodi and pd.notna(row[c_kodi]) else None
+                            group_explicit = row[c_guruh] if c_guruh and pd.notna(row[c_guruh]) else None
+                            
+                            is_header = float(cost)==0 and float(sell)==0 and float(stock)==0 and not code
+                            if is_header and not group_explicit:
+                                inherited_group = str(name).strip()
+                                continue
+                            
+                            data.append({
+                                'code': str(code).strip() if code else None,
+                                'name': str(name).strip(),
+                                'group': str(group_explicit).strip() if group_explicit else inherited_group,
+                                'costPrice': float(cost),
+                                'sellPrice': float(sell),
+                                'stock': float(stock),
+                                'minStock': float(row[c_zapas]) if c_zapas and pd.notna(row[c_zapas]) else 0
+                            })
+                        
+                        res = requests.post(f"{API_URL}/products/bulk", json={"products": data}, headers=get_headers())
+                        if res.status_code == 200:
+                            st.success(f"{res.json().get('count')} ta mahsulot yuklandi!"); st.cache_data.clear(); st.rerun()
+                        else: st.error(res.text)
+                    else: st.error("Nomi ustuni topilmadi!")
 
         st.divider()
 
