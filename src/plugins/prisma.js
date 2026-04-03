@@ -3,12 +3,9 @@ const { PrismaClient } = require('@prisma/client')
 
 module.exports = fp(async (fastify, opts) => {
   const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL
-      }
-    }
+    datasourceUrl: process.env.DATABASE_URL
   })
+
 
 
   await prisma.$connect()
