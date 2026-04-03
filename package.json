@@ -17,8 +17,7 @@
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/jwt": "^10.0.0",
-    "@prisma/adapter-better-sqlite3": "^7.5.0",
-    "@prisma/client": "^7.5.0",
+    "@prisma/client": "~6.2.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.3.1",
@@ -26,7 +25,7 @@
     "node-cron": "^4.2.1",
     "node-telegram-bot-api": "^0.67.0",
     "pdfkit": "^0.18.0",
-    "prisma": "^7.5.0",
+    "prisma": "~6.2.1",
     "qrcode": "^1.5.4",
     "zod": "^4.3.6"
   }

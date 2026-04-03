@@ -2,9 +2,8 @@ const fp = require('fastify-plugin')
 const { PrismaClient } = require('@prisma/client')
 
 module.exports = fp(async (fastify, opts) => {
-  const prisma = new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL
-  })
+  const prisma = new PrismaClient()
+
 
 
 
