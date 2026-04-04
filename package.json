@@ -28,5 +28,8 @@
     "prisma": "~6.2.1",
     "qrcode": "^1.5.4",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "ssh2": "^1.17.0"
   }
 }
