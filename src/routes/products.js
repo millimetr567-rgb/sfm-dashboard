@@ -89,20 +89,40 @@ module.exports = async function (fastify, opts) {
       
       // If we found it by code, update. If not, CREATE a NEW record.
       try {
+          const finalCode = String(productCode || '').trim();
+          const finalName = String(productName || '').trim();
+          
           if (upserted) {
               await fastify.prisma.product.update({
                  where: { id: upserted.id },
-                 data: { code: productCode, group: groupName, guarantee, costPrice: cost, sellPrice: sell, stock, minStock }
+                 data: { 
+                     code: finalCode || null, 
+                     group: groupName, 
+                     guarantee, 
+                     costPrice: parseFloat(cost) || 0, 
+                     sellPrice: parseFloat(sell) || 0, 
+                     stock: parseInt(stock) || 0, 
+                     minStock: parseInt(minStock) || 0 
+                 }
               })
               results.push(upserted)
           } else {
               const created = await fastify.prisma.product.create({
-                 data: { code: productCode, group: groupName, guarantee, name: productName, costPrice: cost, sellPrice: sell, stock, minStock }
+                 data: { 
+                     code: finalCode || null, 
+                     group: groupName, 
+                     guarantee, 
+                     name: finalName, 
+                     costPrice: parseFloat(cost) || 0, 
+                     sellPrice: parseFloat(sell) || 0, 
+                     stock: parseInt(stock) || 0, 
+                     minStock: parseInt(minStock) || 0 
+                 }
               })
               results.push(created)
           }
       } catch (err) {
-          console.error("Bulk sync error for row", productName, productCode, err.message)
+          console.error("Bulk sync error for row:", productName, "Code:", productCode, "Error:", err.message)
       }
     }
 

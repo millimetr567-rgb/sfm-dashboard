@@ -80,19 +80,30 @@ export default function Products() {
         for (let row of data) {
           const rowKeys = Object.keys(row);
           const findKey = (keys) => {
-            const found = rowKeys.find(k => keys.some(pk => k.trim().toLowerCase().includes(pk.toLowerCase())));
+            const found = rowKeys.find(k => {
+              const kClean = String(k || '').trim().toLowerCase();
+              return keys.some(pk => kClean.includes(pk.toLowerCase()) || pk.toLowerCase().includes(kClean));
+            });
             return found ? row[found] : null;
           };
 
-          const name = findKey(['nomi', 'наименование', 'name', 'название', 'tovar']);
+          const parseNum = (val) => {
+            if (val === null || val === undefined) return 0;
+            if (typeof val === 'number') return val;
+            const stripped = String(val).replace(/[^0-9.]/g, '');
+            const parsed = parseFloat(stripped);
+            return isNaN(parsed) ? 0 : parsed;
+          };
+
+          const name = findKey(['nomi', 'наименование', 'name', 'название', 'tovar', 'product']);
           if (!name) continue;
 
-          const code = findKey(['kodi', 'kod', 'код', 'artikul', 'code']);
-          const groupExplicit = findKey(['guruh', 'группа', 'group', 'kategoriya']);
-          const cost = findKey(['tannarx', 'себестоимост', 'cost', 'вход']);
-          const sell = findKey(['sotish', 'narxi', 'narx', 'цена', 'sell', 'price']);
-          const stk = findKey(['sklad', 'остаток', 'soni', 'son', 'qoldiq', 'miqdor', 'stock', 'количество']);
-          const minStk = findKey(['min', 'zapas', 'minimum']);
+          const code = String(findKey(['kodi', 'kod', 'код', 'artikul', 'code', 'id', 'sn', 'barcode']) || '').trim();
+          const groupExplicit = findKey(['guruh', 'группа', 'group', 'kategoriya', 'category']);
+          const cost = parseNum(findKey(['tannarx', 'себестоимост', 'cost', 'вход', 'buy', 'prixody']));
+          const sell = parseNum(findKey(['sotish', 'narxi', 'narx', 'цена', 'sell', 'price', 'sotuv']));
+          const stk = parseNum(findKey(['sklad', 'остаток', 'soni', 'son', 'qoldiq', 'miqdor', 'stock', 'количество', 'count', 'itog']));
+          const minStk = parseNum(findKey(['min', 'zapas', 'minimum', 'limit', 'savdo']));
 
           const isHeader = (cost === null || cost === undefined) && (sell === null || sell === undefined) && (stk === null || stk === undefined) && !code;
           if (isHeader && !groupExplicit) { inheritedGroup = String(name).trim(); continue; }
