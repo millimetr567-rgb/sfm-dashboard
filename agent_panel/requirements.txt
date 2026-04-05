@@ -1,8 +1,0 @@
-streamlit
-requests
-pandas
-plotly
-python-dotenv
-streamlit-js-eval
-openpyxl
-xlsxwriter
