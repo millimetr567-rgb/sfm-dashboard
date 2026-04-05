@@ -119,7 +119,7 @@ module.exports = async function (fastify, opts) {
       const deleted = await fastify.prisma.product.deleteMany({})
       
       // Reset client stats
-      await fastify.prisma.client.updateMany({ data: { currentDebt: 0, totalPurchases: 0 } });
+      await fastify.prisma.client.updateMany({ data: { currentDebt: 0 } });
       
       return { count: deleted.count, message: "Keskin tozalash: Barcha mahsulotlar hamda eski savdo/qarz tarixi butunlay o'chirildi!" }
     } catch(err) {
