@@ -11,7 +11,7 @@ module.exports = async function (fastify, opts) {
   // 1. Get all agents
   fastify.get('/agents', async (request, reply) => {
     return fastify.prisma.agent.findMany({
-      select: { id: true, username: true, role: true, createdAt: true },
+      select: { id: true, username: true, role: true, permissions: true, createdAt: true },
       orderBy: { createdAt: 'desc' }
     })
   })
@@ -43,7 +43,8 @@ module.exports = async function (fastify, opts) {
       }
       return await fastify.prisma.agent.update({
           where: { id },
-          data
+          data,
+          select: { id: true, username: true, role: true, permissions: true }
       })
   })
 

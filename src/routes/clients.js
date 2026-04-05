@@ -29,7 +29,10 @@ module.exports = async function (fastify, opts) {
     return { orders, payments }
   })
 
+  // Create Client
   fastify.post('/', async (request, reply) => {
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('crm'));
+    if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { name, phone, address, creditLimit, telegramGroupId, customId, telegramUsername } = request.body
     
     let generatedId = (customId && customId.trim()) ? customId.trim() : null;
@@ -59,7 +62,10 @@ module.exports = async function (fastify, opts) {
     })
   })
 
+  // Update Client
   fastify.put('/:id', async (request, reply) => {
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('crm'));
+    if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     const { name, phone, address, creditLimit, status, telegramGroupId, telegramUserId, customId, telegramUsername } = request.body
     
@@ -79,7 +85,10 @@ module.exports = async function (fastify, opts) {
     })
   })
 
+  // Delete Client
   fastify.delete('/:id', async (request, reply) => {
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('crm'));
+    if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     return fastify.prisma.client.delete({
       where: { id }

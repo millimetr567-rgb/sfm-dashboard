@@ -7,9 +7,10 @@ module.exports = async function (fastify, opts) {
     })
   })
 
-  // Create Single Product (Admin only)
+  // Create Single Product (Admin or Agent with 'product' permission)
   fastify.post('/', async (request, reply) => {
-    if (request.user.role !== 'ADMIN') return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { code, name, group, guarantee, costPrice, sellPrice, stock, minStock } = request.body
     
     if (!name) return reply.code(400).send({ error: 'Mahsulot nomi kiritilishi shart' })
@@ -29,8 +30,9 @@ module.exports = async function (fastify, opts) {
 
   // Bulk upsert products (from Excel)
   fastify.post('/bulk', async (request, reply) => {
-    if (request.user.role !== 'ADMIN') {
-      return reply.code(403).send({ error: 'Faqat admin ruxsatiga ega!' })
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    if (!isAllowed) {
+      return reply.code(403).send({ error: 'Faqat ruxsat berilgan foydalanuvchilar uchun!' })
     }
 
     const { products } = request.body
@@ -128,9 +130,10 @@ module.exports = async function (fastify, opts) {
     }
   })
 
-  // Update Single Product (Admin only)
+  // Update Single Product
   fastify.put('/:id', async (request, reply) => {
-    if (request.user.role !== 'ADMIN') return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     const { code, name, costPrice, sellPrice, stock, minStock, group, guarantee } = request.body
 
@@ -149,9 +152,10 @@ module.exports = async function (fastify, opts) {
     return updated
   })
 
-  // Delete Single Product (Admin only)
+  // Delete Single Product
   fastify.delete('/:id', async (request, reply) => {
-    if (request.user.role !== 'ADMIN') return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
+    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     await fastify.prisma.product.delete({ where: { id } })
     return { success: true }
