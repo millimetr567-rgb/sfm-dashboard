@@ -36,98 +36,141 @@ class TelegramService {
     return result;
   }
 
+  // Utility to escape Markdown special characters
+  esc(text) {
+    if (!text) return "";
+    return String(text).replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  }
+
   initHandlers() {
     this.bot.onText(/\/start/, (msg) => {
-      this.bot.sendMessage(msg.chat.id, `ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
+      this.bot.sendMessage(msg.chat.id, `Sizning Chat ID: \`${msg.chat.id}\`\nIltimos, ushbu ID-ni sozlamalarga kiriting.`, { parse_mode: 'Markdown' });
     });
 
     this.bot.on('callback_query', async (q) => {
-      const { data, message, from } = q
-      const cid = message.chat.id
-      const mid = message.message_id
-      if (data.startsWith('confirm_order_')) {
-          // Deprecated
-      } else if (data.startsWith('admin_approve_order_')) {
-          await this.handleOrderDecision(data.replace('admin_approve_order_', ''), cid, mid, from, 'approve')
-      } else if (data.startsWith('admin_reject_order_')) {
-          await this.handleOrderDecision(data.replace('admin_reject_order_', ''), cid, mid, from, 'reject')
-      } else if (data.startsWith('approve_pay_')) {
-          await this.handlePaymentDecision(data.replace('approve_pay_', ''), cid, mid, from, 'approve')
-      } else if (data.startsWith('reject_pay_')) {
-          await this.handlePaymentDecision(data.replace('reject_pay_', ''), cid, mid, from, 'reject')
+      const { data, message, from } = q;
+      if (!message) return;
+      const cid = message.chat.id;
+      const mid = message.message_id;
+      try {
+        if (data.startsWith('admin_approve_order_')) {
+            await this.handleOrderDecision(data.replace('admin_approve_order_', ''), cid, mid, from, 'approve')
+        } else if (data.startsWith('admin_reject_order_')) {
+            await this.handleOrderDecision(data.replace('admin_reject_order_', ''), cid, mid, from, 'reject')
+        } else if (data.startsWith('approve_pay_')) {
+            await this.handlePaymentDecision(data.replace('approve_pay_', ''), cid, mid, from, 'approve')
+        } else if (data.startsWith('reject_pay_')) {
+            await this.handlePaymentDecision(data.replace('reject_pay_', ''), cid, mid, from, 'reject')
+        }
+      } catch (e) {
+        console.error('[Telegram] Callback Error:', e.message);
       }
-    })
+    });
   }
 
-  async handlePaymentDecision(id, cid, mid, user, type) {
-      if (!this.fastify) return;
-      const adminName = user.username || user.first_name || 'Admin';
-      try {
-          if (type === 'approve') {
-              await this.fastify.inject({
-                  method: 'POST',
-                  url: `/api/payments/${id}/approve`,
-                  headers: { 'id': user.id, 'role': 'ADMIN', 'username': adminName } // Simulation of auth if needed or use direct prisma
-              });
-              // Better: use direct service logic or internal call
-              const p = await this.fastify.prisma.payment.findUnique({ where: { id }, include: { client: true } });
-              if (!p || p.status !== 'WAITING_APPROVAL') return;
-              
-              await this.fastify.prisma.$transaction(async (tx) => {
-                  await tx.payment.update({ where: { id }, data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() } });
-                  await tx.client.update({ where: { id: p.clientId }, data: { currentDebt: { decrement: p.amount } } });
-                  if (p.orderId) await tx.order.update({ where: { id: p.orderId }, data: { status: 'PAID', paymentMethod: p.paymentMethod } });
-              });
-              
-              await this.bot.editMessageText(`✅ To'lov tasdiqlandi!\nMijoz: ${p.client.name}\nSumma: ${p.amount} $`, { chat_id: cid, message_id: mid });
-          } else {
-              await this.fastify.prisma.payment.update({ where: { id }, data: { status: 'REJECTED' } });
-              await this.bot.editMessageText(`❌ To'lov rad etildi.`, { chat_id: cid, message_id: mid });
-          }
-      } catch (e) { console.error('Payment Decision Error:', e.message) }
+  async handlePaymentDecision(id, cid, mid, from, type) {
+    if (!this.fastify) return;
+    const adminName = from.username || from.first_name || 'Admin';
+    try {
+        const payment = await this.fastify.prisma.payment.findUnique({ 
+            where: { id },
+            include: { client: true }
+        });
+        if (!payment || payment.status !== 'WAITING_APPROVAL') {
+            await this.bot.answerCallbackQuery(id, { text: "Ushbu to'lov allaqachon qayta ishlangan yoki o'chirilgan." });
+            return;
+        }
+
+        if (type === 'approve') {
+            await this.fastify.prisma.$transaction(async (tx) => {
+                await tx.payment.update({
+                    where: { id },
+                    data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() }
+                });
+
+                if (payment.orderId) {
+                    const order = await tx.order.findUnique({ where: { id: payment.orderId } });
+                    if (order) {
+                        if (['WAITING_APPROVAL', 'PENDING_PAYMENT', 'PENDING_APPROVAL'].includes(order.status)) {
+                            await tx.client.update({
+                                where: { id: payment.clientId },
+                                data: { currentDebt: { increment: order.amount } }
+                            });
+                        }
+                        await tx.order.update({
+                            where: { id: payment.orderId },
+                            data: { status: 'PAID' }
+                        });
+                    }
+                }
+
+                await tx.client.update({
+                    where: { id: payment.clientId },
+                    data: { currentDebt: { decrement: payment.amount } }
+                });
+            });
+
+            await this.bot.editMessageText(`✅ *TO'LOV TASDIQLANDI*\n💰 Summa: ${payment.amount} $\n👤 Mijoz: ${this.esc(payment.client.name)}\nAdmin: ${this.esc(adminName)}`, { 
+                chat_id: cid, 
+                message_id: mid,
+                parse_mode: 'Markdown'
+            });
+        } else {
+            await this.fastify.prisma.payment.update({
+                where: { id },
+                data: { status: 'REJECTED' }
+            });
+            await this.bot.editMessageText(`❌ *TO'LOV RAD ETILDI*\nBy: ${this.esc(adminName)}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
+        }
+    } catch (e) { 
+        console.error('Payment Decision Error:', e.message);
+        try { await this.bot.answerCallbackQuery(id, { text: "Xatolik: " + e.message }); } catch(err) {}
+    }
   }
 
   async broadcastToAdmins(msg) {
-    if (!this.fastify) return;
-    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
-    
-    if (chatIds.length === 0) {
-        const adminId = process.env.ADMIN_GROUP_ID || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-        if (adminId) chatIds.push(adminId);
-    }
+    if (!this.fastify || !this.bot) return;
+    try {
+        const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+        let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+        
+        // If settings are empty, ALWAY use environment default
+        if (chatIds.length === 0) {
+            const adminId = process.env.DEFAULT_TELEGRAM_GROUP_ID;
+            if (adminId) chatIds.push(adminId);
+        }
 
-    if (!this.bot || chatIds.length === 0) return;
-
-    for (const tid of chatIds) {
-        try {
-            await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
-        } catch (e) { console.error(`Broadcast Error to ${tid}:`, e.message); }
-    }
+        for (const tid of chatIds) {
+            try {
+                await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
+            } catch (e) { console.error(`[Telegram] Broadcast Error to ${tid}:`, e.message); }
+        }
+    } catch (err) { console.error("[Telegram] Broadcast Fatal Error:", err.message); }
   }
 
   async sendPaymentNotification(p, c, u) {
     if (!this.fastify || !this.bot) return;
-    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
-    
-    if (chatIds.length === 0) {
-        const tid = c.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-        if (tid) chatIds.push(tid);
-    }
+    try {
+        const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+        const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+        
+        if (chatIds.length === 0) {
+            const tid = c.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+            if (tid) chatIds.push(tid);
+        }
 
-    if (chatIds.length === 0) return;
+        if (chatIds.length === 0) return;
 
-    const msg = `💸 *To'lov muvaffaqiyatli qabul qilindi!*\n\n👤 Mijoz: ${c.name}\n💰 Summa: ${p.amount} $\n💳 Usul: ${p.paymentMethod}\n✅ Holat: TASDIQLANDI`;
-    
-    for (const tid of chatIds) {
-        try {
-            await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
-        } catch(e) { console.error("Payment Notify Error:", e.message); }
-    }
+        const msg = `💸 *To'lov muvaffaqiyatli qabul qilindi!*\n\n👤 Mijoz: ${this.esc(c.name)}\n💰 Summa: ${p.amount} $\n💳 Usul: ${p.paymentMethod}\n✅ Holat: TASDIQLANDI`;
+        
+        for (const tid of chatIds) {
+            try {
+                await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
+            } catch(e) { console.error("Payment Notify Error:", e.message); }
+        }
+    } catch (err) { console.error("Payment Notification Error:", err.message); }
   }
 
-  // ... (Other methods: generateOrderPDF, formatTime, etc. kept as they are needed)
   async sendConfirmationWithPDF(paymentId, msg) {
     if (!this.fastify || !this.bot) return;
     try {
@@ -135,22 +178,17 @@ class TelegramService {
             where: { id: paymentId },
             include: { client: true }
         });
-        if (!payment) {
-            console.error(`[Telegram] Payment not found for confirmation: ${paymentId}`);
-            return;
-        }
+        if (!payment) return;
 
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-        const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+        let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         if (chatIds.length === 0) {
-            const tid = payment.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-            if (tid) chatIds.push(tid);
+            const envId = process.env.DEFAULT_TELEGRAM_GROUP_ID;
+            if (envId) chatIds.push(envId);
+            else if (payment.client.telegramGroupId) chatIds.push(payment.client.telegramGroupId);
         }
         
-        if (chatIds.length === 0) {
-            console.error(`[Telegram] No chat IDs found for broadcast (Payment: ${paymentId})`);
-            return;
-        }
+        if (chatIds.length === 0) return;
 
         const opts = {
           parse_mode: 'Markdown',
@@ -169,9 +207,7 @@ class TelegramService {
                     where: { id: payment.orderId },
                     include: { items: { include: { product: true } }, client: true, agent: true }
                 });
-                if (order) {
-                    pdf = await this.generateOrderPDF(order);
-                }
+                if (order) pdf = await this.generateOrderPDF(order);
             } catch(e) { console.error(`[Telegram] PDF Error: ${e.message}`); }
         }
 
@@ -184,65 +220,11 @@ class TelegramService {
                     });
                 }
                 await this.bot.sendMessage(tid, msg, opts);
-                console.log(`[Telegram] Payment confirmation sent to ${tid}`);
             } catch (e) { console.error(`[Telegram] Send Error to ${tid}:`, e.message); }
         }
-    } catch (err) {
-        console.error(`[Telegram] Fatal Notification Error: ${err.message}`);
-    }
+    } catch (err) { console.error(`[Telegram] Fatal Notification Error: ${err.message}`); }
   }
 
-  async handlePaymentDecision(id, cid, mid, from, type) {
-    if (!this.fastify) return;
-    const adminName = from.username || from.first_name || 'Admin';
-    try {
-        const payment = await this.fastify.prisma.payment.findUnique({ 
-            where: { id },
-            include: { client: true }
-        });
-        if (!payment || payment.status !== 'WAITING_APPROVAL') return;
-
-        if (type === 'approve') {
-            await this.fastify.prisma.$transaction(async (tx) => {
-                await tx.payment.update({
-                    where: { id },
-                    data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() }
-                });
-
-                if (payment.orderId) {
-                    const order = await tx.order.findUnique({ where: { id: payment.orderId } });
-                    if (order && ['WAITING_APPROVAL', 'PENDING_PAYMENT', 'PENDING_APPROVAL'].includes(order.status)) {
-                        await tx.client.update({
-                            where: { id: payment.clientId },
-                            data: { currentDebt: { increment: order.amount } }
-                        });
-                    }
-                    await tx.order.update({
-                        where: { id: payment.orderId },
-                        data: { status: 'PAID' }
-                    });
-                }
-
-                await tx.client.update({
-                    where: { id: payment.clientId },
-                    data: { currentDebt: { decrement: payment.amount } }
-                });
-            });
-
-            await this.bot.editMessageText(`✅ *TO'LOV TASDIQLANDI*\n💰 Summa: ${payment.amount} $\n👤 Mijoz: ${payment.client.name}\nAdmin: ${adminName}`, { 
-                chat_id: cid, 
-                message_id: mid,
-                parse_mode: 'Markdown'
-            });
-        } else {
-            await this.fastify.prisma.payment.update({
-                where: { id },
-                data: { status: 'REJECTED' }
-            });
-            await this.bot.editMessageText(`❌ *TO'LOV RAD ETILDI*\nBy: ${adminName}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
-        }
-    } catch (e) { console.error('Payment Decision Error:', e.message); }
-  }
   formatDate(date) {
     if (!date) return '';
     const d = new Date(date);
@@ -281,94 +263,88 @@ class TelegramService {
 
   async sendOrderNotification(order) {
     if (!this.fastify || !this.bot) return;
-    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
-    
-    if (chatIds.length === 0) {
-        const tid = order.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-        if (tid) chatIds.push(tid);
-    }
-    
-    if (chatIds.length === 0) return;
-
     try {
-      const pdf = await this.generateOrderPDF(order);
-      
-      let text = `📦 *YANGI BUYURTMA YARATILDI*\n\n` +
-                 `🆔 Raqam: \`#${order.orderNumber || order.id.substring(0,8)}\`\n` +
-                 `👤 Mijoz: *${order.client.name}*\n` +
-                 `💵 Jami: *${order.amount.toFixed(2)} $*\n` +
-                 `👤 Agent: ${order.agent?.username || '—'}\n` +
-                 `📊 Holat: *TASDIQ KUTILMOQDA*`;
-
-      const opts = {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [[
-            { text: '✅ Tasdiqlash', callback_data: `admin_approve_order_${order.id}` },
-            { text: '❌ Bekor qilish', callback_data: `admin_reject_order_${order.id}` }
-          ]]
+        const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+        let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+        
+        if (chatIds.length === 0) {
+            const envId = process.env.DEFAULT_TELEGRAM_GROUP_ID;
+            if (envId) chatIds.push(envId);
+            else if (order.client.telegramGroupId) chatIds.push(order.client.telegramGroupId);
         }
-      };
+        
+        if (chatIds.length === 0) return;
 
-      for (const tid of chatIds) {
-        await this.bot.sendDocument(tid, pdf, { 
-          caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
-          filename: `Order_${order.id.substring(0,6)}.pdf` 
-        });
-        await this.bot.sendMessage(tid, text, opts);
-      }
+        const pdf = await this.generateOrderPDF(order);
+        let text = `📦 *YANGI BUYURTMA YARATILDI*\n\n` +
+                   `🆔 Raqam: \`#${order.orderNumber || order.id.substring(0,8)}\`\n` +
+                   `👤 Mijoz: *${this.esc(order.client.name)}*\n` +
+                   `💵 Jami: *${order.amount.toFixed(2)} $*\n` +
+                   `👤 Agent: ${this.esc(order.agent?.username || '—')}\n` +
+                   `📊 Holat: *TASDIQ KUTILMOQDA*`;
+
+        const opts = {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ Tasdiqlash', callback_data: `admin_approve_order_${order.id}` },
+              { text: '❌ Bekor qilish', callback_data: `admin_reject_order_${order.id}` }
+            ]]
+          }
+        };
+
+        for (const tid of chatIds) {
+          try {
+            await this.bot.sendDocument(tid, pdf, { 
+              caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
+              filename: `Order_${order.id.substring(0,6)}.pdf` 
+            });
+            await this.bot.sendMessage(tid, text, opts);
+          } catch(e) { console.error(`[Telegram] Order Notify Error to ${tid}:`, e.message); }
+        }
     } catch (e) { console.error('Notify Error:', e.message) }
   }
 
   async handleOrderDecision(id, cid, mid, from, type) {
-    if (!this.fastify) return;
+    if (!this.fastify || !this.bot) return;
     const adminName = from.username || from.first_name || 'Admin';
     try {
       if (type === 'approve') {
-        // Find order
-        const order = await this.fastify.prisma.order.findUnique({ 
-            where: { id },
-            include: { items: true, client: true }
-        });
-        
-        if (!order || order.status === 'CONFIRMED') return;
-
-        // Transactional update
-        await this.fastify.prisma.$transaction(async (tx) => {
-            await tx.order.update({
-                where: { id },
-                data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() }
-            });
-            await tx.client.update({
-                where: { id: order.clientId },
-                data: { currentDebt: { increment: order.amount } }
-            });
-        });
-
-        await this.bot.editMessageText(`✅ *TASDIQLANDI*\nBuyurtma: #${order.orderNumber || order.id.substring(0,8)}\nMijoz: ${order.client.name}\nAdmin: ${adminName}`, { 
-          chat_id: cid, 
-          message_id: mid,
-          parse_mode: 'Markdown'
-        });
-      } else {
-        const order = await this.fastify.prisma.order.update({
-          where: { id },
-          data: { status: 'CANCELLED' },
-          include: { items: true, client: true }
-        });
-        
-        // Return stock
-        for (const i of order.items) {
-          await this.fastify.prisma.product.update({
-            where: { id: i.productId },
-            data: { stock: { increment: i.quantity } }
-          });
+        const order = await this.fastify.prisma.order.findUnique({ where: { id }, include: { items: true, client: true } });
+        if (!order || order.status === 'CONFIRMED') {
+            await this.bot.answerCallbackQuery(id, { text: "Ushbu buyurtma allaqachon tasdiqlangan." });
+            return;
         }
 
-        await this.bot.editMessageText(`❌ *BEKOR QILINDI*\nBy: ${adminName}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
+        await this.fastify.prisma.$transaction(async (tx) => {
+            await tx.order.update({ where: { id }, data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() } });
+            await tx.client.update({ where: { id: order.clientId }, data: { currentDebt: { increment: order.amount } } });
+        });
+
+        await this.bot.editMessageText(`✅ *TASDIQLANDI*\nBuyurtma: #${order.orderNumber || order.id.substring(0,8)}\nMijoz: ${this.esc(order.client.name)}\nAdmin: ${this.esc(adminName)}`, { 
+          chat_id: cid, message_id: mid, parse_mode: 'Markdown'
+        });
+      } else {
+        const order = await this.fastify.prisma.order.findUnique({ where: { id } });
+        if (!order) return;
+        
+        await this.fastify.prisma.$transaction(async (tx) => {
+            const updated = await tx.order.update({
+                where: { id },
+                data: { status: 'CANCELLED' },
+                include: { items: true }
+            });
+            for (const i of updated.items) {
+                await tx.product.update({ where: { id: i.productId }, data: { stock: { increment: i.quantity } } });
+            }
+        });
+
+        await this.bot.editMessageText(`❌ *BEKOR QILINDI*\nBy: ${this.esc(adminName)}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
       }
-    } catch (e) { console.error('Order Decision Error:', e.message) }
+    } catch (e) { 
+        console.error('Order Decision Error:', e.message);
+        try { await this.bot.answerCallbackQuery(id, { text: "Xatolik: " + e.message }); } catch(err) {}
+    }
   }
 }
 

@@ -116,13 +116,13 @@ export default function CRM() {
         <div className="card glass-panel" style={{ marginBottom: '25px', padding: '20px', borderLeft: '5px solid var(--secondary)' }}>
           <h3>{t('add_new')}</h3>
           <form onSubmit={addClient} className="responsive-grid" style={{ marginTop: '15px' }}>
-            <div className="form-group"><label>Mijoz ID # (ixtiyoriy)</label><input type="text" className="form-control" value={newId} onChange={e => setNewId(e.target.value)} /></div>
-            <div className="form-group"><label>F.I.O / Nomi *</label><input type="text" className="form-control" value={newName} onChange={e => setNewName(e.target.value)} required /></div>
-            <div className="form-group"><label>Telefon</label><input type="text" className="form-control" value={newPhone} onChange={e => setNewPhone(e.target.value)} /></div>
-            <div className="form-group"><label>Manzil</label><input type="text" className="form-control" value={newAddress} onChange={e => setNewAddress(e.target.value)} /></div>
-            <div className="form-group"><label>Qarz Limiti ($)</label><input type="number" className="form-control" value={newLimit} onChange={e => setNewLimit(e.target.value)} /></div>
-            <div className="form-group"><label>Telegram Username (@username)</label><input type="text" className="form-control" value={newTelegramUsername} onChange={e => setNewTelegramUsername(e.target.value)} placeholder="@username" /></div>
-            <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
+            <div className="form-group"><label className="form-label">Mijoz ID # (ixtiyoriy)</label><input type="text" className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="Masalan: 3M1085" /></div>
+            <div className="form-group"><label className="form-label">F.I.O / Nomi *</label><input type="text" className="form-control" value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Mijoz ismi..." /></div>
+            <div className="form-group"><label className="form-label">Telefon</label><input type="text" className="form-control" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+998..." /></div>
+            <div className="form-group"><label className="form-label">Manzil</label><input type="text" className="form-control" value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder="Shahar, tuman..." /></div>
+            <div className="form-group"><label className="form-label">Qarz Limiti ($)</label><input type="number" className="form-control" value={newLimit} onChange={e => setNewLimit(e.target.value)} /></div>
+            <div className="form-group"><label className="form-label">Telegram Username</label><input type="text" className="form-control" value={newTelegramUsername} onChange={e => setNewTelegramUsername(e.target.value)} placeholder="@username" /></div>
+            <div className="mobile-full-width" style={{ display: 'flex', gap: '10px' }}>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{t('action_save')}</button>
               <button type="button" onClick={() => setShowAdd(false)} className="btn btn-secondary">{t('action_cancel')}</button>
             </div>
@@ -131,77 +131,85 @@ export default function CRM() {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {filtered.map(c => (
-          <div key={c.id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
+        {sortedClientsByDebt.map(c => (
+          <div key={c.id} className="card animate-fade-in" style={{ padding: '0', overflow: 'hidden' }}>
             <div 
               style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
               onClick={() => loadHistory(c)}
             >
-              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <div style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}><UserCircle size={24} color="var(--primary)"/></div>
-                <div>
-                  <div style={{ fontWeight: 'bold' }}>{c.name} {c.customId && <small style={{ color: 'var(--text-muted)' }}>#{c.customId}</small>}</div>
-                  <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', gap: '15px', alignItems: 'center', overflow: 'hidden' }}>
+                <div style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', flexShrink: 0 }}><UserCircle size={24} color="var(--primary)"/></div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name} {c.customId && <small style={{ color: 'var(--text-muted)' }}>#{c.customId}</small>}</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {c.phone || '-'} | {c.address || '-'} 
-                    {c.telegramUsername && <span style={{ color: 'var(--secondary)', marginLeft: '8px' }}>({c.telegramUsername})</span>}
                   </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mijoz Balansi / Limit</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: c.currentDebt > c.creditLimit ? 'var(--danger)' : c.currentDebt > 0 ? 'var(--warning)' : 'var(--success)' }}>
-                    ${c.currentDebt?.toLocaleString()} <small style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>/ ${c.creditLimit?.toLocaleString()}</small>
+              <div style={{ textAlign: 'right', display: 'flex', gap: '15px', alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'none', mdDisplay: 'block' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mijoz Balansi</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: c.currentDebt > c.creditLimit ? 'var(--danger)' : c.currentDebt > 0 ? 'var(--warning)' : 'var(--success)' }}>
+                    ${c.currentDebt?.toLocaleString()}
                   </div>
                 </div>
-                {isAdmin && <button onClick={(e) => deleteClient(e, c.id)} style={{ color: 'var(--danger)', background: 'transparent' }}><Trash2 size={18}/></button>}
+                <div className="md-hidden" style={{ fontWeight: 'bold', color: c.currentDebt > c.creditLimit ? 'var(--danger)' : c.currentDebt > 0 ? 'var(--warning)' : 'var(--success)' }}>
+                   ${c.currentDebt?.toLocaleString()}
+                </div>
+                {isAdmin && <button onClick={(e) => deleteClient(e, c.id)} style={{ color: 'var(--danger)', background: 'transparent', padding: '5px' }}><Trash2 size={18}/></button>}
               </div>
             </div>
 
             {selectedClient?.id === c.id && (
-              <div className="animate-fade-in" style={{ padding: '20px', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <h4>📊 AKT Sverka / Hisob-kitoblar</h4>
-                  <button onClick={exportSverka} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}><Download size={16}/> Excel yuklash</button>
+              <div className="animate-fade-in" style={{ padding: '20px', background: 'rgba(0,0,0,0.15)', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                  <h4 style={{ fontSize: '0.9rem' }}>📊 AKT SVERKA <small style={{ color: 'var(--text-muted)' }}>({selectedClient.name})</small></h4>
+                  <button onClick={exportSverka} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem', height: '32px' }}><Download size={14}/> Excel</button>
                 </div>
-                {loadingHistory ? <div style={{ textAlign: 'center', padding: '20px' }}>{t('loading')}</div> : (
-                  <div className="responsive-grid">
-                    <div>
-                      <h5 style={{ color: 'var(--warning)', marginBottom: '12px', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '1px' }}>Buyurtmalar</h5>
-                      {history.orders.map(o => (
-                        <div key={o.id} style={{ marginBottom: '8px' }}>
-                          <div 
-                            onClick={() => setExpandedOrderInHistory(expandedOrderInHistory === o.id ? null : o.id)}
-                            style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', cursor: 'pointer' }}
-                          >
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {expandedOrderInHistory === o.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-                                <span>#{o.orderNumber || o.id.substring(0,8)}</span>
-                             </div>
-                             <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>+${o.amount}</span>
-                          </div>
-                          {expandedOrderInHistory === o.id && (
-                            <div className="animate-fade-in" style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 8px 8px', fontSize: '0.8rem' }}>
-                               {o.items?.map(it => (
-                                 <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{it.product?.name} x {it.quantity}</span>
-                                    <span>${it.price * it.quantity}</span>
-                                 </div>
-                               ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <h5 style={{ color: 'var(--success)', marginBottom: '12px', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '1px' }}>To'lovlar</h5>
-                      {history.payments.filter(p => p.status === 'CONFIRMED').map(p => (
-                        <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Package size={14} color="var(--success)"/><span>{p.paymentMethod}</span></div>
-                          <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>-${p.amount}</span>
-                        </div>
-                      ))}
-                    </div>
+
+                {loadingHistory ? <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>{t('loading')}...</div> : (
+                  <div className="table-container" style={{ borderRadius: '12px' }}>
+                    <table className="custom-table" style={{ fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '10px 15px' }}>Sana</th>
+                          <th style={{ padding: '10px 15px' }}>Amaliyot</th>
+                          <th style={{ padding: '10px 15px' }}>Summa ($)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          ...history.orders.map(o => ({ ...o, _type: 'order', date: o.createdAt })),
+                          ...history.payments.filter(p => p.status === 'CONFIRMED').map(p => ({ ...p, _type: 'payment', date: p.date || p.createdAt }))
+                        ]
+                        .sort((a,b) => new Date(b.date) - new Date(a.date))
+                        .map((item, idx) => (
+                          <tr key={idx} style={{ cursor: item._type === 'order' ? 'pointer' : 'default' }} onClick={() => item._type === 'order' && setExpandedOrderInHistory(expandedOrderInHistory === item.id ? null : item.id)}>
+                            <td style={{ padding: '10px 15px', color: 'var(--text-muted)' }}>{new Date(item.date).toLocaleDateString()}</td>
+                            <td style={{ padding: '10px 15px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {item._type === 'order' ? <Package size={14} color="var(--warning)"/> : <Wallet size={14} color="var(--success)"/>}
+                                <span>{item._type === 'order' ? `Buyurtma #${item.orderNumber || item.id.substring(0,6)}` : `To'lov: ${item.paymentMethod}`}</span>
+                                {item._type === 'order' && (expandedOrderInHistory === item.id ? <ChevronUp size={12}/> : <ChevronDown size={12}/>)}
+                              </div>
+                              {item._type === 'order' && expandedOrderInHistory === item.id && (
+                                <div style={{ marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', fontSize: '0.75rem' }}>
+                                  {item.items?.map(it => (
+                                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
+                                      <span>{it.product?.name} x {it.quantity}</span>
+                                      <span>${it.price * it.quantity}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '10px 15px', textAlign: 'right', fontWeight: 'bold', color: item._type === 'order' ? 'var(--danger)' : 'var(--success)' }}>
+                              {item._type === 'order' ? '+' : '-'}${item.amount?.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

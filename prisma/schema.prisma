@@ -136,5 +136,6 @@ model Settings {
   templateChek     String?  @default("Chek xabari: @name, @cur_sum$")
   templateQarz     String?  @default("Assalomu alaykum, hurmatli mijoz @name. Sizning eski qarzingiz mavjud: @cur_sum$. O‘tib ketgan muddati @days kun.")
   templateBirthday String?  @default("Tug'ilgan kuningiz bilan, @name!")
-  updatedAt        DateTime @updatedAt
+  exchangeRate     Float?    @default(12800)
+  updatedAt        DateTime  @updatedAt
 }

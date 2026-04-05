@@ -2,6 +2,15 @@
 module.exports = async function (fastify, opts) {
   fastify.addHook('preHandler', fastify.authenticate)
 
+  // Public settings (e.g., exchange rate for agents)
+  fastify.get('/public', async (request, reply) => {
+    const settings = await fastify.prisma.settings.findUnique({
+      where: { id: 'singleton' },
+      select: { exchangeRate: true }
+    });
+    return settings || { exchangeRate: 12800 };
+  });
+
   // Singleton settings getter
   fastify.get('/', async (request, reply) => {
     if (request.user.role !== 'ADMIN') {

@@ -40,12 +40,14 @@ export default function CashRegister() {
 
   const fetchData = async () => {
     try {
-      const [cRes, oRes] = await Promise.all([
+      const [cRes, oRes, sRes] = await Promise.all([
         axios.get(`${API_URL}/clients`),
-        axios.get(`${API_URL}/orders`)
+        axios.get(`${API_URL}/orders`),
+        axios.get(`${API_URL}/settings/public`)
       ]);
       setClients(cRes.data);
       setPendingOrders(oRes.data.filter(o => o.status === 'PENDING_PAYMENT' || o.status === 'WAITING_APPROVAL'));
+      if (sRes.data?.exchangeRate) setKurs(sRes.data.exchangeRate.toString());
     } catch (e) {
       console.error("Data fetch error", e);
     }
@@ -151,116 +153,95 @@ export default function CashRegister() {
     setSelectedClient(null); setOrderId('');
   };
 
-  const inputGroupStyle = {
-    marginBottom: '10px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '5px'
+  const saveExchangeRate = async () => {
+    try {
+        await axios.post(`${API_URL}/settings`, { exchangeRate: p(kurs) });
+        alert("Valyuta kursi saqlandi!");
+    } catch (e) { alert("Xato: " + e.message); }
   };
 
-  const inputStyle = {
-    background: 'var(--input-bg)',
-    border: 'var(--glass-border)',
-    borderRadius: '12px',
-    padding: '14px',
-    color: 'var(--text-main)',
-    fontSize: '1rem',
-    width: '100%',
-    outline: 'none',
-  };
-
-  const labelStyle = {
-    fontSize: '0.85rem',
-    color: 'var(--text-muted)',
-    fontWeight: '500',
-    marginLeft: '5px'
-  };
-
+  // Currency & Conversion
   return (
     <div style={{ background: 'var(--bg-color)', minHeight: '100vh', color: 'var(--text-main)', padding: '15px' }}>
       {/* Client Selection Card */}
-      <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '15px', marginBottom: '15px', border: 'var(--glass-border)' }}>
-        <h4 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Wallet size={20} color="var(--primary)" /> Mijozni tanlang
-        </h4>
-        <select 
-            style={inputStyle} 
-            value={clientId} 
-            onChange={(e) => handleClientChange(e.target.value)}
-        >
-            <option value="" style={{ background: 'var(--bg-surface)' }}>-- Tanlash --</option>
-            {clients.map(c => <option key={c.id} value={c.id} style={{ background: 'var(--bg-surface)' }}>{c.name}</option>)}
-        </select>
-        
-        {selectedClient && (
-            <div style={{ marginTop: '15px', padding: '12px', background: 'var(--input-bg)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', border: 'var(--glass-border)' }}>
-                <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Balans</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: (selectedClient.currentDebt || 0) > 0 ? 'var(--danger)' : 'var(--success)' }}>
-                        ${selectedClient.currentDebt?.toLocaleString()} | {((selectedClient.currentDebt || 0) * p(kurs)).toLocaleString()} UZS
-                    </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Oxirgi to'lov</div>
-                    <div style={{ fontSize: '0.85rem' }}>{selectedClient.lastPaymentDate ? new Date(selectedClient.lastPaymentDate).toLocaleDateString() : '—'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '20px', alignItems: 'start' }} className="grid-mobile-1">
+        <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '15px', border: 'var(--glass-border)' }}>
+          <h4 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Wallet size={20} color="var(--primary)" /> Mijozni tanlang
+          </h4>
+          <select 
+              style={inputStyle} 
+              value={clientId} 
+              onChange={(e) => handleClientChange(e.target.value)}
+          >
+              <option value="" style={{ background: 'var(--bg-surface)' }}>-- Tanlash --</option>
+              {clients.map(c => <option key={c.id} value={c.id} style={{ background: 'var(--bg-surface)' }}>{c.name}</option>)}
+          </select>
+          
+          {selectedClient && (
+              <div style={{ marginTop: '15px', padding: '15px', background: 'var(--input-bg)', borderRadius: '12px', border: 'var(--glass-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Balans</div>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: (selectedClient.currentDebt || 0) > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                              ${selectedClient.currentDebt?.toLocaleString()} 
+                          </div>
+                          <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>≈ {((selectedClient.currentDebt || 0) * p(kurs)).toLocaleString()} UZS</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Oxirgi to'lov</div>
+                          <div style={{ fontSize: '0.85rem' }}>{selectedClient.lastPaymentDate ? new Date(selectedClient.lastPaymentDate).toLocaleDateString() : '—'}</div>
+                      </div>
+                  </div>
+              </div>
+          )}
+        </div>
+
+        {/* Exchange Rate Card (Desktop Right, Mobile Top/Bottom) */}
+        <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '15px', border: 'var(--glass-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <label style={labelStyle}>Valyuta kursi (1$)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input type="checkbox" checked={convert} onChange={e => setConvert(e.target.checked)} style={{ width: '16px', height: '16px' }} />
+                    <span style={{ fontSize: '0.75rem' }}>Konv.</span>
                 </div>
             </div>
-        )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <input type="number" style={{ ...inputStyle, padding: '10px' }} value={kurs} onChange={e => setKurs(e.target.value)} />
+                <button onClick={saveExchangeRate} className="btn-icon" style={{ borderRadius: '12px', width: '45px', height: '45px', background: 'var(--primary)', color: 'white' }}><Save size={18}/></button>
+            </div>
+        </div>
       </div>
 
+      {/* Debt List / Pending Orders */}
+      {selectedClient && pendingOrders.some(o => o.clientId === selectedClient.id) && (
+        <div style={{ marginTop: '15px', background: 'var(--bg-surface)', padding: '15px', borderRadius: '15px', border: 'var(--glass-border)' }}>
+            <h5 style={{ marginBottom: '10px', fontSize: '0.9rem', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '8px' }}><ShoppingCart size={16}/> TO'LOV KUTILAYOTGAN BUYURTMALAR</h5>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+                {pendingOrders.filter(o => o.clientId === selectedClient.id).map(o => (
+                    <div 
+                        key={o.id} 
+                        onClick={() => setOrderId(o.id)}
+                        style={{ 
+                            minWidth: '180px', 
+                            padding: '12px', 
+                            background: orderId === o.id ? 'rgba(99,102,241,0.1)' : 'var(--input-bg)', 
+                            border: orderId === o.id ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>#{o.orderNumber || o.id.substring(0,6)}</div>
+                        <div style={{ fontSize: '1rem', fontWeight: '900', margin: '4px 0' }}>${o.amount?.toLocaleString()}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+      )}
+
       {/* Main Payment Form */}
-      <form onSubmit={handleSubmit} style={{ paddingBottom: '100px' }}>
-        <div style={inputGroupStyle}>
-            <label style={labelStyle}>Naqd (So'm)</label>
-            <div style={{ position: 'relative' }}>
-                <input type="number" step="any" placeholder="0" style={inputStyle} value={cash} onChange={e => setCash(e.target.value)} />
-                {cash && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setCash('')} />}
-            </div>
-        </div>
-
-        <div style={inputGroupStyle}>
-            <label style={labelStyle}>Terminal</label>
-            <div style={{ position: 'relative' }}>
-                <input type="number" step="any" placeholder="0" style={inputStyle} value={terminal} onChange={e => setTerminal(e.target.value)} />
-                {terminal && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setTerminal('')} />}
-            </div>
-        </div>
-
-        <div style={inputGroupStyle}>
-            <label style={labelStyle}>Click / Payme</label>
-            <div style={{ position: 'relative' }}>
-                <input type="number" step="any" placeholder="0" style={inputStyle} value={click} onChange={e => setClick(e.target.value)} />
-                {click && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setClick('')} />}
-            </div>
-        </div>
-
-        <div style={inputGroupStyle}>
-            <label style={labelStyle}>Valyuta ($)</label>
-            <div style={{ position: 'relative' }}>
-                <input type="number" step="any" placeholder="0" style={inputStyle} value={usd} onChange={e => setUsd(e.target.value)} />
-                {usd && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setUsd('')} />}
-            </div>
-        </div>
-
-        <div style={inputGroupStyle}>
-            <label style={labelStyle}>Bank O'tkazmasi</label>
-            <div style={{ position: 'relative' }}>
-                <input type="number" step="any" placeholder="0" style={inputStyle} value={bank} onChange={e => setBank(e.target.value)} />
-                {bank && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setBank('')} />}
-            </div>
-        </div>
-
-        {/* Currency & Conversion */}
-        <div style={{ background: 'var(--bg-surface)', padding: '15px', borderRadius: '15px', margin: '15px 0', border: 'var(--glass-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <label style={labelStyle}>Valyuta kursi</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Konvertatsiya</span>
-                    <input type="checkbox" checked={convert} onChange={e => setConvert(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                </div>
-            </div>
-            <input type="number" style={{ ...inputStyle, background: 'var(--bg-color)' }} value={kurs} onChange={e => setKurs(e.target.value)} />
-        </div>
+      <form onSubmit={handleSubmit} style={{ paddingBottom: '120px', marginTop: '15px' }} className="responsive-grid">
 
         {/* Deductions */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

@@ -32,18 +32,20 @@ export default function NewOrder() {
   const dropdownRef    = useRef(null);
   const searchInputRef = useRef(null);
   const { t } = useTranslation();
-  const exchangeRate = 12600;
+  const [exchangeRate, setExchangeRate] = useState(12800);
 
   /* ─── DATA ─────────────────────────────────────────────── */
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, pRes] = await Promise.all([
+      const [cRes, pRes, sRes] = await Promise.all([
         axios.get(`${API_URL}/clients`),
         axios.get(`${API_URL}/products`),
+        axios.get(`${API_URL}/settings/public`)
       ]);
       setClients(Array.isArray(cRes.data) ? cRes.data : []);
       setProducts(Array.isArray(pRes.data) ? pRes.data : []);
+      if (sRes.data?.exchangeRate) setExchangeRate(sRes.data.exchangeRate);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -185,190 +187,158 @@ export default function NewOrder() {
   ════════════════════════════════════════════════════════════ */
   return (
     <>
-      <div className="pos-root">
-
-        {/* ══ HEADER ══════════════════════════════════════════ */}
-        <div className="pos-header">
-          <div className="h-card">
-
-            {/* DATE */}
-            <div className="h-cell h-cell-border" onClick={() => document.getElementById('dateRef').showPicker()}>
-              <Calendar size={17} className="h-icon-blue" />
-              <div className="h-text">
-                <span className="h-label">O'PERASIYA SANASI</span>
-                <input
-                  type="date" id="dateRef"
-                  value={orderDate}
-                  onChange={e => setOrderDate(e.target.value)}
-                  className="h-date-input"
-                />
-              </div>
+      <div className="pos-root animate-fade-in">
+      {/* ══ HEADER ══ */}
+      <div className="pos-header">
+        <div className="h-card">
+          <div className="h-cell h-cell-border h-cell-clickable" onClick={() => document.getElementById('dateRef').showPicker()}>
+            <Calendar size={17} className="h-icon-blue" />
+            <div className="h-text">
+              <span className="h-label">O'PERASIYA SANASI</span>
+              <input
+                type="date" id="dateRef"
+                value={orderDate}
+                onChange={e => setOrderDate(e.target.value)}
+                className="h-date-input"
+              />
             </div>
-
-            {/* MIJOZ */}
-            <div
-              className="h-cell h-cell-border h-cell-clickable"
-              ref={clientBtnRef}
-              onClick={openDropdown}
-            >
-              <User size={17} color={selectedClient ? '#fbbf24' : '#555'} />
-              <div className="h-text overflow-hidden">
-                <span className="h-label">MIJOZ</span>
-                <div className={selectedClient ? 'h-val h-val-active truncate' : 'h-val h-val-empty truncate'}>
-                  {selectedClient ? selectedClient.name : 'Mijozni tanlang...'}
-                </div>
-              </div>
-              <ChevronDown size={13} style={{ opacity: 0.3, flexShrink: 0 }} />
+          </div>
+          <div className="h-cell h-cell-border h-cell-clickable" onClick={openDropdown} ref={clientBtnRef}>
+            <div className={`h-icon-blue ${!selectedClient ? 'animate-pulse' : ''}`}><Users size={24}/></div>
+            <div className="h-text">
+               <div className="h-label">MIJOZ TANLASH</div>
+               <div className={`h-val ${selectedClient ? 'h-val-active' : 'h-val-empty'}`}>
+                 {selectedClient ? selectedClient.name : 'TANLANMAGAN'}
+               </div>
+               {selectedClient && <div className="h-sublabel">${selectedClient.currentDebt?.toLocaleString()} qarz</div>}
             </div>
-
-            {/* BALANS */}
-            <div
-              className={`h-cell ${selectedClient ? 'h-cell-clickable' : ''}`}
-              onClick={() => selectedClient && openStatement(selectedClient.id)}
-            >
-              <Wallet size={17} color={(selectedClient?.currentDebt || 0) > 0 ? '#ef4444' : '#10b981'} />
-              <div className="h-text">
-                <span className="h-label">BALANS</span>
-                {selectedClient ? (
-                  <>
-                    <div className={(selectedClient.currentDebt || 0) > 0 ? 'h-val text-danger' : 'h-val text-success'}>
-                      ${Number(selectedClient.currentDebt || 0).toLocaleString()}
-                    </div>
-                    <div className="h-sublabel">
-                      ≈ {(Number(selectedClient.currentDebt || 0) * exchangeRate).toLocaleString()} so'm
-                    </div>
-                  </>
-                ) : (
-                  <div className="h-val h-val-empty">--</div>
-                )}
-              </div>
-              {selectedClient && <History size={13} style={{ opacity: 0.35, flexShrink: 0 }} />}
+          </div>
+          <div className="h-cell h-cell-clickable" onClick={() => selectedClient && setShowStatement(true)}>
+            <div className="h-icon-blue"><Wallet size={24}/></div>
+            <div className="h-text">
+               <div className="h-label">BALANS KO'RISH</div>
+               <div className="h-val text-success">AKT SVERKA</div>
             </div>
-
           </div>
         </div>
+      </div>
 
-        {/* ══ SEARCH ══════════════════════════════════════════ */}
-        <div className="pos-search-zone">
-          <div className="pos-search-box">
-            <Search size={19} style={{ color: '#555', flexShrink: 0 }} />
-            <input
-              type="text"
-              className="pos-search-input"
-              placeholder="Mahsulot qidirish..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            <Filter size={17} style={{ color: '#555', flexShrink: 0 }} />
-          </div>
-        </div>
-
-        {/* ══ FEED ════════════════════════════════════════════ */}
-        <div className="pos-feed scroll-styled">
-          {loading && !search ? (
-            <div className="pos-loading">
-              <div className="pos-spinner" />
-              <span>Yuklanmoqda...</span>
+      <div className="pos-main-layout">
+        <div className="pos-content-side">
+          {/* SEARCH */}
+          <div className="pos-search-zone">
+            <div className="pos-search-box">
+              <Search size={20} color="var(--text-muted)" />
+              <input 
+                type="text" 
+                className="pos-search-input" 
+                placeholder="Mahsulot qidirish..." 
+                value={search} 
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && <X size={20} style={{ cursor: 'pointer' }} onClick={() => setSearch('')}/>}
             </div>
-          ) : isSearchActive ? (
-            /* SEARCH RESULTS */
-            filteredProducts(true).map(p => (
-              <div key={p.id} className="pos-product-card" onClick={() => addToCart(p)}>
-                <div className="flex-grow-1 overflow-hidden pe-3">
-                  <div className="p-name">{p.name}</div>
-                  <div className="p-meta">{p.code || 'B/K'} · {p.group}</div>
-                  <div className={`p-stock ${Number(p.stock) < 5 ? 'low' : ''}`}>Ost: {p.stock} ta</div>
-                </div>
-                <div className="p-price">${p.sellPrice}</div>
+          </div>
+
+          <div className="pos-feed scroll-styled">
+            {Object.keys(groupedProducts).length === 0 ? (
+              <div className="pos-loading">
+                <div className="pos-spinner"></div>
+                <div>Mahsulotlar topilmadi...</div>
               </div>
-            ))
-          ) : (
-            /* CATEGORY LIST */
-            groups.map(group => (
-              <div key={group}>
-                <div
-                  className="pos-cat-card"
-                  onClick={() => setOpenedCategory(openedCategory === group ? null : group)}
-                >
-                  <div className="cat-icon"><Package size={20} /></div>
-                  <div className="v-stack flex-grow-1 ms-3 overflow-hidden">
-                    <div className="cat-name truncate">{group}</div>
-                    <div className="cat-count">{groupedProducts[group].length} mahsulot</div>
+            ) : (
+              Object.keys(groupedProducts).map(group => (
+                <div key={group} className="cat-group" style={{ marginBottom: '10px' }}>
+                  <div 
+                    className="pos-cat-card" 
+                    onClick={() => setOpenedCategory(openedCategory === group ? null : group)}
+                    style={{ cursor: 'pointer', borderLeft: openedCategory === group ? '4px solid var(--primary)' : '1px solid var(--border-color)' }}
+                  >
+                    <div className="cat-icon"><Package size={20} /></div>
+                    <div className="v-stack flex-grow-1 ms-3">
+                      <div className="cat-name">{group}</div>
+                      <div className="cat-count">{groupedProducts[group].length} xil mahsulot</div>
+                    </div>
+                    <ChevronRight 
+                      size={18} 
+                      style={{ 
+                        color: '#555', 
+                        flexShrink: 0,
+                        transform: openedCategory === group ? 'rotate(90deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s' 
+                      }} 
+                    />
                   </div>
-                  <ChevronRight
-                    size={18}
-                    style={{
-                      color: '#555',
-                      flexShrink: 0,
-                      transform: openedCategory === group ? 'rotate(90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s',
-                    }}
-                  />
+                  {openedCategory === group && groupedProducts[group].map(p => (
+                    <div key={p.id} className="pos-sub-item" onClick={() => addToCart(p)}>
+                      <div className="v-stack flex-grow-1 overflow-hidden pe-3">
+                        <div className="sub-name truncate">{p.name}</div>
+                        <div className={`sub-stock ${Number(p.stock) < 5 ? 'low' : ''}`}>Ost: {p.stock} ta</div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="sub-price">${p.sellPrice}</div>
+                        <div className="btn-add-mini"><Plus size={13} /></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {openedCategory === group && groupedProducts[group].map(p => (
-                  <div key={p.id} className="pos-sub-item" onClick={() => addToCart(p)}>
-                    <div className="v-stack flex-grow-1 overflow-hidden pe-3">
-                      <div className="sub-name truncate">{p.name}</div>
-                      <div className={`sub-stock ${Number(p.stock) < 5 ? 'low' : ''}`}>Ost: {p.stock} ta</div>
-                    </div>
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="sub-price">${p.sellPrice}</div>
-                      <div className="btn-add-mini"><Plus size={13} /></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
 
-        {/* ══ CART ════════════════════════════════════════════ */}
-        <div className="pos-cart-panel">
-
-          {/* Cart rows */}
-          <div className="pos-cart-rows scroll-styled">
-            {cart.length === 0 ? (
-              <div className="cart-empty">SAVATCHA BO'SH</div>
-            ) : cart.map(item => (
-              <div key={item.productId} className="cart-row">
-                <div className="flex-grow-1 overflow-hidden pe-3">
-                  <div className="cart-name truncate">{item.name}</div>
-                  <div className="cart-meta">${item.price} × {item.quantity}</div>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <div className="qty-ctrl">
-                    <button className="btn-qty" onClick={() => updateQty(item.productId, -1)}><Minus size={11} /></button>
-                    <span className="qty-num">{item.quantity}</span>
-                    <button className="btn-qty" onClick={() => updateQty(item.productId, +1)}><Plus size={11} /></button>
-                  </div>
-                  <div className="cart-total">${(item.price * item.quantity).toFixed(1)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Summary + Button */}
-          <div className="pos-summary">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <div className="sum-label">JAMI SONI: {totalItems} TA</div>
-                <div className="sum-usd">${totalUSD.toLocaleString()}</div>
-              </div>
-              <div className="text-end">
-                <div className="sum-label">JAMI SUMMA</div>
-                <div className="sum-uzs">{totalUZS.toLocaleString()} SO'M</div>
-              </div>
+        {/* ══ CART SIDEBAR ══ */}
+        <div className="pos-sidebar-side">
+          <div className="pos-cart-panel">
+            <div style={{ padding: '15px', borderBottom: '1px solid var(--border-color)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-card)' }}>
+              <ShoppingCart size={18} color="var(--primary)"/> BUYURTMA RO'YXATI
             </div>
-            <button
-              className="btn-submit"
-              onClick={submitOrder}
-              disabled={loading || cart.length === 0 || !selectedClient}
-            >
-              <Send size={20} />
-              {loading ? 'YUKLANMOQDA...' : "SAQLASH VA JO'NATISH"}
-            </button>
+            {/* Cart rows */}
+            <div className="pos-cart-rows scroll-styled">
+              {cart.length === 0 ? (
+                <div className="cart-empty">SAVATCHA BO'SH</div>
+              ) : cart.map(item => (
+                <div key={item.productId} className="cart-row">
+                  <div className="flex-grow-1 overflow-hidden pe-3">
+                    <div className="cart-name truncate">{item.name}</div>
+                    <div className="cart-meta">${item.price} × {item.quantity}</div>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="qty-ctrl">
+                      <button className="btn-qty" onClick={() => updateQty(item.productId, -1)}><Minus size={11} /></button>
+                      <span className="qty-num">{item.quantity}</span>
+                      <button className="btn-qty" onClick={() => updateQty(item.productId, +1)}><Plus size={11} /></button>
+                    </div>
+                    <div className="cart-total">${(item.price * item.quantity).toFixed(1)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary + Button */}
+            <div className="pos-summary">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <div className="sum-label">JAMI SONI: {totalItems} TA</div>
+                  <div className="sum-usd">${totalUSD.toLocaleString()}</div>
+                </div>
+                <div className="text-end">
+                  <div className="sum-label">JAMI SUMMA</div>
+                  <div className="sum-uzs">{totalUZS.toLocaleString()} SO'M</div>
+                </div>
+              </div>
+              <button
+                className="btn-submit"
+                onClick={submitOrder}
+                disabled={loading || cart.length === 0 || !selectedClient}
+              >
+                <Send size={20} />
+                {loading ? 'YUKLANMOQDA...' : "SAQLASH VA JO'NATISH"}
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
       </div>
 
@@ -431,52 +401,69 @@ export default function NewOrder() {
         <div className="modal-backdrop" onClick={() => setShowStatement(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-head">
-              <div>
+              <div style={{ flex: 1 }}>
                 <div className="modal-title">MOLIYAVIY HISOBOT</div>
                 <div className="modal-sub">{selectedClient?.name}</div>
               </div>
-              <button className="modal-close" onClick={() => setShowStatement(false)}><X size={22} /></button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button className="btn-modal-sec" style={{ height: '36px', padding: '0 12px', fontSize: '0.8rem', borderRadius: '10px' }}>
+                  <Receipt size={14} /> PDF
+                </button>
+                <button className="modal-close" onClick={() => setShowStatement(false)}><X size={22} /></button>
+              </div>
             </div>
             <div className="modal-tiles">
               <div className="m-tile red">
-                <div className="tile-label">JAMI QARZ (USD)</div>
-                <div className="tile-val">${Number(selectedClient?.currentDebt || 0).toLocaleString()}</div>
+                <div className="tile-label">QARZ (USD)</div>
+                <div className="tile-val" style={{ fontSize: '1.1rem' }}>${Number(selectedClient?.currentDebt || 0).toLocaleString()}</div>
               </div>
               <div className="m-tile blue">
-                <div className="tile-label">SO'MDAGI HISOB</div>
-                <div className="tile-val">≈ {(Number(selectedClient?.currentDebt || 0) * exchangeRate).toLocaleString()}</div>
+                <div className="tile-label">SO'MDA</div>
+                <div className="tile-val" style={{ fontSize: '1.1rem' }}>≈ {((selectedClient?.currentDebt || 0) * exchangeRate).toLocaleString()}</div>
               </div>
             </div>
-            <div className="modal-timeline scroll-styled">
-              {[
-                ...statementData.orders.map(o => ({ ...o, _type: 'order' })),
-                ...statementData.payments.map(p => ({ ...p, _type: 'payment' })),
-              ]
-                .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
-                .map((item, idx) => (
-                  <div key={idx} className="tl-row">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div>
-                        <div className="tl-date">{new Date(item.createdAt || item.date).toLocaleDateString()}</div>
-                        <div className="tl-title">
-                          {item._type === 'order' ? 'Savdo buyurtmasi' : `To'lov (${item.paymentMethod || 'Tizim'})`}
-                        </div>
-                      </div>
-                      <div className={item._type === 'order' ? 'tl-amount danger' : 'tl-amount success'}>
-                        {item._type === 'order' ? '-' : '+'}${Number(item.amount).toLocaleString()}
-                      </div>
-                    </div>
-                    {item.items && (
-                      <div className="tl-items truncate">
-                        {item.items.map(i => `${i.product?.name} x${i.quantity}`).join(', ')}
-                      </div>
-                    )}
-                  </div>
-                ))}
+            <div className="modal-timeline scroll-styled" style={{ flex: 1 }}>
+              <div className="table-container" style={{ border: 'none', background: 'transparent' }}>
+                <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '8px 12px' }}>Sana</th>
+                      <th style={{ padding: '8px 12px' }}>Amaliyot</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Summa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ...statementData.orders.map(o => ({ ...o, _type: 'order', date: o.createdAt })),
+                      ...statementData.payments.map(p => ({ ...p, _type: 'payment', date: p.date || p.createdAt })),
+                    ]
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map((item, idx) => (
+                      <tr key={idx}>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{new Date(item.date).toLocaleDateString()}</td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {item._type === 'order' ? <Package size={12} color="var(--warning)"/> : <Wallet size={12} color="var(--success)"/>}
+                            <span style={{ fontWeight: 500 }}>{item._type === 'order' ? 'Savdo' : 'To\'lov'}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 'bold', color: item._type === 'order' ? 'var(--danger)' : 'var(--success)' }}>
+                          {item._type === 'order' ? '+' : '-'}${Number(item.amount).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-modal-sec"><Receipt size={16} /> PDF Chek</button>
-              <button className="btn-modal-pri"><ArrowRight size={16} /> To'lov</button>
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '12px' }}>
+              <button 
+                className="btn-modal-pri" 
+                style={{ width: '100%', height: '44px', borderRadius: '12px' }}
+                onClick={() => { setShowStatement(false); }}
+              >
+                YOPISH
+              </button>
             </div>
           </div>
         </div>
@@ -573,112 +560,31 @@ export default function NewOrder() {
           transition: border-color 0.2s;
         }
         .pos-cat-card:hover { border-color: var(--primary); }
-        .cat-icon { width: 42px; height: 42px; background: rgba(99,102,241,0.08); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0; }
-        .cat-name { font-weight: 900; font-size: 0.95rem; color: var(--text-main); }
-        .cat-count { font-size: 0.7rem; color: var(--text-muted); }
-
-        .pos-sub-item { padding: 12px 18px 12px 22px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; transition: background 0.15s; }
-        .pos-sub-item:hover { background: rgba(255,255,255,0.02); }
-        .sub-name { font-weight: 700; color: var(--text-main); font-size: 0.88rem; }
-        .sub-stock { font-size: 0.65rem; font-weight: 900; color: var(--success); }
-        .sub-stock.low { color: var(--danger); }
-        .sub-price { font-weight: 800; font-size: 0.9rem; color: var(--secondary); }
-        .btn-add-mini { background: var(--primary); color: white; border-radius: 8px; padding: 5px; display: flex; align-items: center; justify-content: center; }
-
-        /* ── CART PANEL ── */
-        .pos-cart-panel { flex-shrink: 0; border-top: 1px solid var(--border-color); background: var(--bg-surface); }
-        .pos-cart-rows { max-height: 130px; overflow-y: auto; padding: 10px 14px; }
-        .cart-empty { padding: 18px; text-align: center; color: var(--text-muted); font-size: 0.8rem; font-weight: 700; }
-        .cart-row { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--border-color); }
-        .cart-name { font-weight: 700; font-size: 0.85rem; color: var(--text-main); }
-        .cart-meta { font-size: 0.68rem; color: var(--text-muted); }
-        .qty-ctrl { display: flex; align-items: center; background: var(--bg-card); border-radius: 10px; padding: 2px; border: 1px solid var(--border-color); }
-        .btn-qty { width: 26px; height: 26px; border: none; background: var(--bg-surface); color: var(--text-main); border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
-        .btn-qty:hover { background: var(--primary); color: white; }
-        .qty-num { font-weight: 900; font-size: 0.85rem; margin: 0 8px; min-width: 16px; text-align: center; }
-        .cart-total { font-weight: 900; color: var(--warning); font-size: 0.85rem; min-width: 55px; text-align: right; }
-
-        .pos-summary { padding: 14px; }
-        .sum-label { font-size: 0.6rem; font-weight: 900; color: var(--text-muted); letter-spacing: 0.06em; }
-        .sum-usd { font-size: 1.3rem; font-weight: 900; color: var(--text-main); }
-        .sum-uzs { font-size: 1.5rem; font-weight: 900; color: var(--primary); }
-        .btn-submit {
-          width: 100%;
-          padding: 20px;
-          background: var(--success);
-          color: white;
-          border: none;
-          border-radius: 18px;
-          font-weight: 900;
-          font-size: 1.1rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          box-shadow: 0 10px 25px rgba(16,185,129,0.35);
-          transition: 0.2s;
-        }
-        .btn-submit:disabled { opacity: 0.3; filter: grayscale(1); }
-        .btn-submit:not(:disabled):active { transform: scale(0.97); }
-
-        /* ── DROPDOWN PORTAL ── */
-        .dd-portal {
-          position: fixed;
-          background: var(--bg-surface);
-          border: 1px solid var(--border-color);
-          border-radius: 16px;
-          z-index: 99999;
-          overflow: hidden;
-          box-shadow: var(--glass-shadow);
-        }
-        @keyframes ddFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-        .dd-search-row { padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; background: var(--bg-card); }
-        .dd-search-input { border: none; background: transparent; color: var(--text-main); outline: none; width: 100%; font-size: 0.9rem; }
-        .dd-search-input::placeholder { color: var(--text-muted); }
-        .dd-list { max-height: 260px; overflow-y: auto; }
-        .dd-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
-        .dd-item { padding: 14px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; transition: background 0.15s; cursor: pointer; }
-        .dd-item:hover { background: var(--input-bg); }
-        .dd-name { font-weight: 800; font-size: 0.95rem; color: var(--text-main); }
-        .dd-phone { font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; }
-        .dd-debt { font-weight: 900; font-size: 0.9rem; flex-shrink: 0; }
-        .dd-debt.danger { color: var(--danger); }
-        .dd-debt.success { color: var(--success); }
-
-        /* ── MODAL ── */
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .modal-box { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 28px; width: 100%; max-width: 480px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
-        .modal-head { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; }
-        .modal-title { font-size: 1rem; font-weight: 900; color: var(--text-main); }
-        .modal-sub { font-size: 0.8rem; color: var(--primary); margin-top: 2px; }
-        .modal-close { background: var(--bg-card); border: none; color: var(--text-main); border-radius: 12px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
-        .modal-tiles { padding: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .m-tile { padding: 16px; border-radius: 16px; }
-        .m-tile.red { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15); }
-        .m-tile.blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15); }
-        .tile-label { font-size: 0.6rem; font-weight: 900; color: var(--text-muted); letter-spacing: 0.05em; }
-        .tile-val { font-size: 1.3rem; font-weight: 900; margin-top: 4px; color: var(--text-main); }
-        .tl-row { padding: 16px 18px; border-bottom: 1px solid var(--border-color); }
-        .tl-date { font-size: 0.65rem; font-weight: 800; color: var(--warning); background: rgba(245,158,11,0.08); padding: 2px 8px; border-radius: 4px; display: inline-block; }
-        .tl-title { font-weight: 800; font-size: 0.9rem; color: var(--text-main); margin-top: 4px; }
-        .tl-amount { font-weight: 900; font-size: 1.05rem; flex-shrink: 0; }
-        .tl-amount.danger { color: var(--danger); }
-        .tl-amount.success { color: var(--success); }
-        .tl-items { font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; }
-        .modal-footer { padding: 16px 18px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; }
-        .btn-modal-sec { flex: 1; height: 50px; background: var(--bg-card); border: none; color: var(--text-main); border-radius: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-modal-pri { flex: 1; height: 50px; background: var(--primary); border: none; color: white; border-radius: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
-
-        /* ── UTILITY ── */
-        .v-stack { display: flex; flex-direction: column; }
-        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .pos-loading { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--text-muted); }
         .pos-spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── LAYOUT ── */
+        .pos-main-layout { display: flex; flex: 1; overflow: hidden; }
+        .pos-content-side { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+        .pos-sidebar-side { width: 380px; background: var(--bg-surface); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+        .pos-sidebar-side .pos-cart-panel { border-top: none; height: 100%; display: flex; flex-direction: column; }
+        .pos-sidebar-side .pos-cart-rows { flex: 1; max-height: none; }
+
         .scroll-styled::-webkit-scrollbar { width: 4px; }
         .scroll-styled::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
         .animate-fade-in { animation: fadeIn 0.25s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 1000px) {
+          .pos-sidebar-side { width: 300px; }
+        }
+
+        @media (max-width: 768px) {
+          .pos-main-layout { flex-direction: column; }
+          .pos-sidebar-side { width: 100%; border-left: none; border-top: 1px solid var(--border-color); height: auto; flex-shrink: 0; }
+          .pos-sidebar-side .pos-cart-rows { max-height: 180px; }
+          .pos-sidebar-side .pos-cart-panel { height: auto; }
+        }
 
         @media (max-width: 600px) {
           .h-card { flex-direction: column; height: auto; border: none; background: transparent; }

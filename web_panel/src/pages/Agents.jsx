@@ -102,17 +102,24 @@ export default function Agents() {
               <div className="form-group">
                 <label className="form-label">Huquqlar (Permissions)</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '10px', background: 'var(--input-bg)', borderRadius: '10px' }}>
-                  {['kassa', 'order', 'debt', 'product', 'crm', 'history'].map(p => (
-                    <label key={p} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                  {[
+                    { key: 'kassa', label: "Kassa / To'lov" },
+                    { key: 'order', label: "Yangi Buyurtma" },
+                    { key: 'debt', label: "Qarzdorlik Sverkasi" },
+                    { key: 'product', label: "Sklad (Ombor)" },
+                    { key: 'crm', label: "Mijozlar" },
+                    { key: 'history', label: "Buyurtmalar Tarixi" }
+                  ].map(p => (
+                    <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
-                        checked={newPermissions.includes(p)} 
+                        checked={newPermissions.includes(p.key)} 
                         onChange={(e) => {
-                          if (e.target.checked) setNewPermissions([...newPermissions, p]);
-                          else setNewPermissions(newPermissions.filter(x => x !== p));
+                          if (e.target.checked) setNewPermissions([...newPermissions, p.key]);
+                          else setNewPermissions(newPermissions.filter(x => x !== p.key));
                         }}
                       />
-                      {p.toUpperCase()}
+                      {p.label}
                     </label>
                   ))}
                 </div>

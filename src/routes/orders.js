@@ -10,69 +10,87 @@ module.exports = async function (fastify, opts) {
 
   // Create Order
   fastify.post('/', async (request, reply) => {
-    const { clientId, coordinates, due_date, driverPhone, items } = request.body
-    const agentId = request.user.id
-    const userRole = request.user.role
+    try {
+      const { clientId, coordinates, due_date, driverPhone, items } = request.body
+      const agentId = request.user.id
+      const userRole = request.user.role
 
-    const client = await fastify.prisma.client.findUnique({ where: { id: clientId } })
-    if (!client) return reply.code(404).send({ error: 'Mijoz topilmadi' })
-    if (client.status === 'BLACKLIST') return reply.code(403).send({ error: 'Mijoz qora ro\'yxatda!' })
-    if (!items || !items.length) return reply.code(400).send({ error: 'Kamida bitta mahsulot tanlanishi kerak' })
+      if (!clientId) return reply.code(400).send({ error: 'Mijoz tanlanmagan' })
+      const client = await fastify.prisma.client.findUnique({ where: { id: clientId } })
+      if (!client) return reply.code(404).send({ error: 'Mijoz topilmadi' })
+      if (client.status === 'BLACKLIST') return reply.code(403).send({ error: 'Mijoz qora ro\'yxatda!' })
+      if (!items || !items.length) return reply.code(400).send({ error: 'Kamida bitta mahsulot tanlanishi kerak' })
 
-    let totalAmount = 0
-    const resolvedItems = []
-    for (const item of items) {
-      const dbProduct = await fastify.prisma.product.findUnique({ where: { id: item.productId } })
-      if (!dbProduct) return reply.code(400).send({ error: `Mahsulot topilmadi: ${item.productId}` })
-      
-      if (item.quantity > dbProduct.stock) {
-        return reply.code(400).send({ error: `Omborda ${dbProduct.name} mahsulotidan yetarli miqdor yo'q (Skladda: ${dbProduct.stock} ta)` })
-      }
-
-      const price = parseFloat(item.price)
-      totalAmount += price * item.quantity
-      resolvedItems.push({ productId: dbProduct.id, quantity: item.quantity, price: price })
-    }
-
-    const orderStatus = 'PENDING_PAYMENT'
-
-    const result = await fastify.prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          clientId, agentId, amount: totalAmount,
-          driverPhone, coordinates, 
-          status: orderStatus,
-          isDebt: false, // will be set in Kassa
-          paymentMethod: 'PENDING',
-          due_date: due_date ? new Date(due_date) : null,
-          items: { create: resolvedItems.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price })) }
-        },
-        include: { client: true, agent: true, items: { include: { product: true } } }
-      })
-
-      // We do NOT update currentDebt here anymore. It happens on payment approval.
-      
-      for (const i of resolvedItems) {
-         await tx.product.update({
-            where: { id: i.productId },
-            data: { stock: { decrement: i.quantity } }
-         })
-      }
-
-      await tx.log.create({
-        data: {
-          action: 'CREATE_ORDER',
-          actorId: agentId,
-          actorRole: userRole,
-          metadata: JSON.stringify({ orderId: order.id, amount: totalAmount, clientId, status: orderStatus })
+      let totalAmount = 0
+      const resolvedItems = []
+      for (const item of items) {
+        const dbProduct = await fastify.prisma.product.findUnique({ where: { id: item.productId } })
+        if (!dbProduct) return reply.code(400).send({ error: `Mahsulot topilmadi: ${item.productId}` })
+        
+        const q = parseFloat(item.quantity)
+        if (isNaN(q) || q <= 0) return reply.code(400).send({ error: 'Noto\'g\'ri miqdor' })
+        
+        if (q > dbProduct.stock) {
+          return reply.code(400).send({ error: `Omborda ${dbProduct.name} mahsulotidan yetarli miqdor yo'q (Skladda: ${dbProduct.stock} ta)` })
         }
+
+        const price = parseFloat(item.price) || 0
+        totalAmount += price * q
+        resolvedItems.push({ productId: dbProduct.id, quantity: q, price: price })
+      }
+
+      const orderStatus = 'PENDING_PAYMENT'
+      let finalDueDate = null
+      if (due_date) {
+        const d = new Date(due_date)
+        if (!isNaN(d.getTime())) finalDueDate = d
+      }
+
+      const result = await fastify.prisma.$transaction(async (tx) => {
+        const order = await tx.order.create({
+          data: {
+            clientId, agentId, amount: totalAmount,
+            driverPhone, coordinates, 
+            status: orderStatus,
+            isDebt: false, 
+            paymentMethod: 'PENDING',
+            due_date: finalDueDate,
+            items: { create: resolvedItems.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price })) }
+          },
+          include: { client: true, agent: true, items: { include: { product: true } } }
+        })
+
+        for (const i of resolvedItems) {
+           await tx.product.update({
+              where: { id: i.productId },
+              data: { stock: { decrement: i.quantity } }
+           })
+        }
+
+        await tx.log.create({
+          data: {
+            action: 'CREATE_ORDER',
+            actorId: agentId,
+            actorRole: userRole,
+            metadata: JSON.stringify({ orderId: order.id, amount: totalAmount, clientId, status: orderStatus })
+          }
+        })
+
+        return order
       })
 
-      return order
-    })
-
-    await fastify.telegram.sendOrderNotification(result)
-    return result
+      try {
+          if (fastify.telegram) {
+              await fastify.telegram.sendOrderNotification(result);
+          }
+      } catch (e) {
+          console.error('[Orders] Telegram Notification Error:', e.message);
+      }
+      return result
+    } catch (err) {
+      console.error('[Orders] Create Error:', err);
+      return reply.code(500).send({ error: 'Buyurtma yaratishda xato yuz berdi: ' + err.message })
+    }
   })
 
   // Approve Order
