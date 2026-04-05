@@ -5,7 +5,7 @@ import { API_URL } from '../constants';
 import { useTranslation } from '../context/LanguageContext';
 import { 
   ShoppingCart, Search, Plus, Minus, Trash2, Send, 
-  ChevronDown, ChevronRight, Filter, Calendar, User, History, 
+  ChevronDown, ChevronRight, Filter, Calendar, User, Users, History, 
   Wallet, X, Receipt, ArrowRight, Package
 } from 'lucide-react';
 

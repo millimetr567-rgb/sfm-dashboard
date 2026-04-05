@@ -4,7 +4,7 @@ import { API_URL } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { 
   Banknote, CreditCard, Smartphone, DollarSign, Building2, 
-  RefreshCcw, Info, Wallet, LogOut, CheckCircle, X, ChevronDown, Trash2
+  RefreshCcw, Info, Wallet, LogOut, CheckCircle, X, ChevronDown, Trash2, Save, ShoppingCart
 } from 'lucide-react';
 
 export default function CashRegister() {
@@ -161,6 +161,10 @@ export default function CashRegister() {
   };
 
   // Currency & Conversion
+  const inputStyle = { width: '100%', padding: '12px 15px', background: 'var(--input-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', color: 'var(--text-main)', fontSize: '0.95rem', outline: 'none' };
+  const labelStyle = { display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' };
+  const inputGroupStyle = { marginBottom: '15px' };
+
   return (
     <div style={{ background: 'var(--bg-color)', minHeight: '100vh', color: 'var(--text-main)', padding: '15px' }}>
       {/* Client Selection Card */}
@@ -241,7 +245,30 @@ export default function CashRegister() {
       )}
 
       {/* Main Payment Form */}
-      <form onSubmit={handleSubmit} style={{ paddingBottom: '120px', marginTop: '15px' }} className="responsive-grid">
+      <form onSubmit={handleSubmit} style={{ paddingBottom: '120px', marginTop: '15px' }}>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}><Banknote size={14}/> NAQD (So'm)</label>
+                <input type="number" style={inputStyle} value={cash} onChange={e => setCash(e.target.value)} placeholder="0" />
+            </div>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}><CreditCard size={14}/> TERMINAL</label>
+                <input type="number" style={inputStyle} value={terminal} onChange={e => setTerminal(e.target.value)} placeholder="0" />
+            </div>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}><Smartphone size={14}/> CLICK / PAYME</label>
+                <input type="number" style={inputStyle} value={click} onChange={e => setClick(e.target.value)} placeholder="0" />
+            </div>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}><Building2 size={14}/> PERECHISLENIYE</label>
+                <input type="number" style={inputStyle} value={bank} onChange={e => setBank(e.target.value)} placeholder="0" />
+            </div>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}><DollarSign size={14}/> VALYUTA ($)</label>
+                <input type="number" style={inputStyle} value={usd} onChange={e => setUsd(e.target.value)} placeholder="0" />
+            </div>
+        </div>
 
         {/* Deductions */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

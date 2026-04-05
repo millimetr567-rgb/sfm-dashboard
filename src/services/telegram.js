@@ -54,9 +54,9 @@ class TelegramService {
       const mid = message.message_id;
       try {
         if (data.startsWith('admin_approve_order_')) {
-            await this.handleOrderDecision(data.replace('admin_approve_order_', ''), cid, mid, from, 'approve')
+            await this.handleOrderDecision(data.replace('admin_approve_order_', ''), cid, mid, from, 'approve', q.id)
         } else if (data.startsWith('admin_reject_order_')) {
-            await this.handleOrderDecision(data.replace('admin_reject_order_', ''), cid, mid, from, 'reject')
+            await this.handleOrderDecision(data.replace('admin_reject_order_', ''), cid, mid, from, 'reject', q.id)
         } else if (data.startsWith('approve_pay_')) {
             await this.handlePaymentDecision(data.replace('approve_pay_', ''), cid, mid, from, 'approve')
         } else if (data.startsWith('reject_pay_')) {
@@ -305,14 +305,18 @@ class TelegramService {
     } catch (e) { console.error('Notify Error:', e.message) }
   }
 
-  async handleOrderDecision(id, cid, mid, from, type) {
+  async handleOrderDecision(id, cid, mid, from, type, qId) {
     if (!this.fastify || !this.bot) return;
     const adminName = from.username || from.first_name || 'Admin';
     try {
       if (type === 'approve') {
         const order = await this.fastify.prisma.order.findUnique({ where: { id }, include: { items: true, client: true } });
-        if (!order || order.status === 'CONFIRMED') {
-            await this.bot.answerCallbackQuery(id, { text: "Ushbu buyurtma allaqachon tasdiqlangan." });
+        if (!order) {
+            await this.bot.answerCallbackQuery(qId, { text: "Xato: Buyurtma topilmadi." });
+            return;
+        }
+        if (order.status === 'CONFIRMED') {
+            await this.bot.answerCallbackQuery(qId, { text: "Ushbu buyurtma allaqachon tasdiqlangan." });
             return;
         }
 
@@ -321,12 +325,16 @@ class TelegramService {
             await tx.client.update({ where: { id: order.clientId }, data: { currentDebt: { increment: order.amount } } });
         });
 
+        await this.bot.answerCallbackQuery(qId, { text: "Buyurtma tasdiqlandi!" });
         await this.bot.editMessageText(`✅ *TASDIQLANDI*\nBuyurtma: #${order.orderNumber || order.id.substring(0,8)}\nMijoz: ${this.esc(order.client.name)}\nAdmin: ${this.esc(adminName)}`, { 
           chat_id: cid, message_id: mid, parse_mode: 'Markdown'
         });
       } else {
         const order = await this.fastify.prisma.order.findUnique({ where: { id } });
-        if (!order) return;
+        if (!order) {
+            await this.bot.answerCallbackQuery(qId, { text: "Xato: Buyurtma topilmadi." });
+            return;
+        }
         
         await this.fastify.prisma.$transaction(async (tx) => {
             const updated = await tx.order.update({
@@ -339,11 +347,12 @@ class TelegramService {
             }
         });
 
+        await this.bot.answerCallbackQuery(qId, { text: "Buyurtma bekor qilindi." });
         await this.bot.editMessageText(`❌ *BEKOR QILINDI*\nBy: ${this.esc(adminName)}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
       }
     } catch (e) { 
         console.error('Order Decision Error:', e.message);
-        try { await this.bot.answerCallbackQuery(id, { text: "Xatolik: " + e.message }); } catch(err) {}
+        try { await this.bot.answerCallbackQuery(qId, { text: "Xatolik: " + e.message }); } catch(err) {}
     }
   }
 }
