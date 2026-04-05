@@ -70,14 +70,28 @@ class CronService {
           }
         })
 
-        if (telegram && telegram.bot && order.client.telegramGroupId) {
-          const msg = `⚠️ *Ogohlantirish!*\n\n` +
-                      `Sizning ${order.id} raqamli zakazingiz to'lov muddati o'tdi.\n` +
-                      `Kechikishlar soni: ${newLateCount}\n` +
-                      (shouldBlacklist ? `🔴 Sizning hisobingiz *BLACKLIST*ga kiritildi. Yangi zakaz bera olmaysiz.` : '');
-          try {
-            await telegram.bot.sendMessage(order.client.telegramGroupId, msg, { parse_mode: 'Markdown' })
-          } catch(e) { console.error('Telegram err on cron limit alert:', e) }
+        if (telegram && telegram.bot) {
+          const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } });
+          const template = settings?.templateQarz || "Assalomu alaykum, hurmatli mijoz @name. Sizning eski qarzingiz mavjud: @cur_sum$. O‘tib ketgan muddati @days kun.";
+          
+          // Calculate days overdue
+          const diff = Math.abs(new Date() - new Date(order.due_date));
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+          const msg = telegram.parseTemplate(template, {
+            name: order.client.name,
+            cur_sum: order.client.currentDebt,
+            days: days
+          });
+
+          const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+          if (chatIds.length === 0 && order.client.telegramGroupId) chatIds.push(order.client.telegramGroupId);
+
+          for (const tid of chatIds) {
+            try {
+              await telegram.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
+            } catch(e) { console.error(`Telegram err on cron limit alert for ${tid}:`, e.message); }
+          }
         }
       }
       

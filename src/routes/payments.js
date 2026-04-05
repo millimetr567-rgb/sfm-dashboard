@@ -45,20 +45,7 @@ module.exports = async function (fastify, opts) {
                     `💳 Usul: ${paymentMethod}\n` +
                     `📝 Izoh: ${notes || '-'}`;
         
-        const opts = {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: '✅ Tasdiqlash', callback_data: `approve_pay_${payment.id}` },
-                { text: '❌ Rad etish', callback_data: `reject_pay_${payment.id}` }
-              ]
-            ]
-          }
-        };
-        // Use a default admin group or specific one
-        const adminId = process.env.ADMIN_GROUP_ID || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-        if (adminId) fastify.telegram.bot.sendMessage(adminId, msg, opts);
+        await fastify.telegram.broadcastToAdmins(msg);
     }
 
     return payment

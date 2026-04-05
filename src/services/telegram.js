@@ -5,16 +5,36 @@ const QRCode = require('qrcode')
 class TelegramService {
   constructor() {
     this.token = process.env.TELEGRAM_BOT_TOKEN
-    this.bot = this.token ? new TelegramBot(this.token, { polling: true }) : null
-    if (this.bot) {
-      this.initHandlers()
-      const stopBot = () => this.bot.stopPolling().catch(() => {});
-      process.on('SIGINT', stopBot);
-      process.on('SIGTERM', stopBot);
+    this.bot = null;
+    if (this.token) {
+        this.initBot(this.token);
     }
   }
 
+  async initBot(token) {
+    if (this.bot) {
+        try { await this.bot.stopPolling(); } catch(e) {}
+    }
+    this.token = token;
+    this.bot = new TelegramBot(token, { polling: true });
+    this.initHandlers();
+    
+    const stopBot = () => this.bot.stopPolling().catch(() => {});
+    process.on('SIGINT', stopBot);
+    process.on('SIGTERM', stopBot);
+    console.log("Telegram Bot Initialized with new token.");
+  }
+
   setFastify(fastify) { this.fastify = fastify }
+
+  parseTemplate(text, data = {}) {
+    if (!text) return "";
+    let result = text;
+    if (data.name) result = result.replace(/@name/g, data.name);
+    if (data.cur_sum !== undefined) result = result.replace(/@cur_sum/g, data.cur_sum.toString());
+    if (data.days !== undefined) result = result.replace(/@days/g, data.days.toString());
+    return result;
+  }
 
   initHandlers() {
     this.bot.onText(/\/start/, (msg) => {
@@ -68,18 +88,43 @@ class TelegramService {
   }
 
   async broadcastToAdmins(msg) {
-    const adminId = process.env.ADMIN_GROUP_ID || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-    if (!this.bot || !adminId) return;
-    try {
-      await this.bot.sendMessage(adminId, msg, { parse_mode: 'Markdown' });
-    } catch (e) { console.error('Broadcast Error:', e.message); }
+    if (!this.fastify) return;
+    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+    
+    if (chatIds.length === 0) {
+        const adminId = process.env.ADMIN_GROUP_ID || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+        if (adminId) chatIds.push(adminId);
+    }
+
+    if (!this.bot || chatIds.length === 0) return;
+
+    for (const tid of chatIds) {
+        try {
+            await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
+        } catch (e) { console.error(`Broadcast Error to ${tid}:`, e.message); }
+    }
   }
 
   async sendPaymentNotification(p, c, u) {
-    const tid = c.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
-    if (!this.bot || !tid) return;
+    if (!this.fastify || !this.bot) return;
+    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+    
+    if (chatIds.length === 0) {
+        const tid = c.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+        if (tid) chatIds.push(tid);
+    }
+
+    if (chatIds.length === 0) return;
+
     const msg = `💸 *To'lov muvaffaqiyatli qabul qilindi!*\n\n👤 Mijoz: ${c.name}\n💰 Summa: ${p.amount} $\n💳 Usul: ${p.paymentMethod}\n✅ Holat: TASDIQLANDI`;
-    await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
+    
+    for (const tid of chatIds) {
+        try {
+            await this.bot.sendMessage(tid, msg, { parse_mode: 'Markdown' });
+        } catch(e) { console.error("Payment Notify Error:", e.message); }
+    }
   }
 
   // ... (Other methods: generateOrderPDF, formatTime, etc. kept as they are needed)
@@ -120,19 +165,20 @@ class TelegramService {
   }
 
   async sendOrderNotification(order) {
-    const tid = order.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID || '-1002444535352'; // Use env or default
-    if (!this.bot || !tid) return;
+    if (!this.fastify || !this.bot) return;
+    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+    
+    if (chatIds.length === 0) {
+        const tid = order.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+        if (tid) chatIds.push(tid);
+    }
+    
+    if (chatIds.length === 0) return;
+
     try {
-      // 1. Generate PDF
       const pdf = await this.generateOrderPDF(order);
       
-      // 2. Send PDF first
-      await this.bot.sendDocument(tid, pdf, { 
-        caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
-        filename: `Order_${order.id.substring(0,6)}.pdf` 
-      });
-
-      // 3. Send Message with Approval Buttons
       let text = `📦 *YANGI BUYURTMA YARATILDI*\n\n` +
                  `🆔 Raqam: \`#${order.orderNumber || order.id.substring(0,8)}\`\n` +
                  `👤 Mijoz: *${order.client.name}*\n` +
@@ -143,16 +189,20 @@ class TelegramService {
       const opts = {
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ Tasdiqlash', callback_query_id: 'approve', callback_data: `admin_approve_order_${order.id}` },
-              { text: '❌ Bekor qilish', callback_query_id: 'reject', callback_data: `admin_reject_order_${order.id}` }
-            ]
-          ]
+          inline_keyboard: [[
+            { text: '✅ Tasdiqlash', callback_data: `admin_approve_order_${order.id}` },
+            { text: '❌ Bekor qilish', callback_data: `admin_reject_order_${order.id}` }
+          ]]
         }
       };
 
-      await this.bot.sendMessage(tid, text, opts);
+      for (const tid of chatIds) {
+        await this.bot.sendDocument(tid, pdf, { 
+          caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
+          filename: `Order_${order.id.substring(0,6)}.pdf` 
+        });
+        await this.bot.sendMessage(tid, text, opts);
+      }
     } catch (e) { console.error('Notify Error:', e.message) }
   }
 

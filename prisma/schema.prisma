@@ -112,3 +112,16 @@ model Log {
   metadata     String?  
   timestamp    DateTime @default(now())
 }
+
+model Settings {
+  id               String   @id @default("singleton")
+  telegramToken    String?
+  chatId1          String?
+  chatId2          String?
+  chatId3          String?
+  templateKassa    String?  @default("Kassa xabari: @name, @cur_sum$")
+  templateChek     String?  @default("Chek xabari: @name, @cur_sum$")
+  templateQarz     String?  @default("Assalomu alaykum, hurmatli mijoz @name. Sizning eski qarzingiz mavjud: @cur_sum$. O‘tib ketgan muddati @days kun.")
+  templateBirthday String?  @default("Tug'ilgan kuningiz bilan, @name!")
+  updatedAt        DateTime @updatedAt
+}

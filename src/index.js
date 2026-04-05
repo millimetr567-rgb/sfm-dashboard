@@ -24,6 +24,7 @@ fastify.register(require('./routes/orders'), { prefix: '/api/orders' })
 fastify.register(require('./routes/payments'), { prefix: '/api/payments' })
 fastify.register(require('./routes/products'), { prefix: '/api/products' })
 fastify.register(require('./routes/cron'), { prefix: '/api/cron' })
+fastify.register(require('./routes/settings'), { prefix: '/api/settings' })
 fastify.register(require('./routes/admin'), { prefix: '/api/admin' })
 
 // Default route
