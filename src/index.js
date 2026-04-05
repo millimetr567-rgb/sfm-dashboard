@@ -1,5 +1,8 @@
 require('dotenv').config()
-const fastify = require('fastify')({ logger: true })
+const fastify = require('fastify')({ 
+  logger: true,
+  bodyLimit: 52428800 // 50MB
+})
 const path = require('path')
 
 // Register Plugins

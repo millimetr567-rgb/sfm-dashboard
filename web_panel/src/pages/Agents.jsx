@@ -140,9 +140,10 @@ export default function Agents() {
                   </h4>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '5px' }}>ID: {a.id}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '8px' }}>
-                    {(a.permissions === 'all' ? ['kassa', 'order', 'debt', 'product', 'crm', 'history'] : (a.permissions || '').split(',')).map(p => (
-                        p && <span key={p} style={{ fontSize: '0.65rem', background: 'var(--input-bg)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>{p}</span>
-                    ))}
+                    {(a.permissions === 'all' ? ['kassa', 'order', 'debt', 'product', 'crm', 'history'] : (a.permissions || '').split(',')).map(p => {
+                        const labels = { kassa: "Kassa", order: "Buyurtma", debt: "Sverka", product: "Sklad", crm: "Mijozlar", history: "Tarix" };
+                        return p && <span key={p} style={{ fontSize: '0.65rem', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{labels[p] || p}</span>
+                    })}
                   </div>
                 </div>
                 {user.id !== a.id && (

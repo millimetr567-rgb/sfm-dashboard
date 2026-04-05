@@ -89,7 +89,10 @@ module.exports = async function (fastify, opts) {
       return result
     } catch (err) {
       console.error('[Orders] Create Error:', err);
-      return reply.code(500).send({ error: 'Buyurtma yaratishda xato yuz berdi: ' + err.message })
+      if (err.code === 'P2002') {
+          return reply.code(400).send({ error: 'Xatolik: Bunday raqamli buyurtma allaqachon mavjud yoki tizimda duplikat ma\'lumot bor.' })
+      }
+      return reply.code(500).send({ error: 'Buyurtma yaratishda xato yuz berdi: ' + (err.message || 'Noma\'lum xato') })
     }
   })
 

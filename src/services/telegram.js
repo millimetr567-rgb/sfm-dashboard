@@ -152,10 +152,12 @@ class TelegramService {
     if (!this.fastify || !this.bot) return;
     try {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-        const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+        let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         
         if (chatIds.length === 0) {
-            chatIds.push('-5180118070');
+            let defId = '-5180118070';
+            if (!defId.startsWith('-100')) defId = '-100' + defId.replace('-', '');
+            chatIds.push(defId);
             const tid = c.telegramGroupId;
             if (tid) chatIds.push(tid);
         }
@@ -184,7 +186,9 @@ class TelegramService {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         if (chatIds.length === 0) {
-            chatIds.push('-5180118070');
+            let defId = '-5180118070';
+            if (!defId.startsWith('-100')) defId = '-100' + defId.replace('-', '');
+            chatIds.push(defId);
             if (payment.client.telegramGroupId) chatIds.push(payment.client.telegramGroupId);
         }
         

@@ -148,7 +148,8 @@ export default function NewOrder() {
       setSelectedClient(null);
       await fetchData();
     } catch (err) {
-      alert("Xato: " + (err.response?.data?.error || "Server xatosi."));
+      console.error('Submit order error:', err);
+      alert("Xato: " + (err.response?.data?.error || "Buyurtmani saqlashda xatolik yuz berdi. Iltimos qaytadan urining."));
     } finally {
       setLoading(false);
     }

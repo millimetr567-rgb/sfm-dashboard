@@ -121,8 +121,12 @@ export default function Products() {
 
         await axios.post(`${API_URL}/products/bulk`, { products: finalProducts });
         fetchProducts();
-        alert("Fayl import qilindi!");
-      } catch (err) { alert("Xato importda!"); }
+        alert("Fayl muvaffaqiyatli import qilindi! (Agar bazada borlari bo'lsa, ular yangilandi)");
+      } catch (err) { 
+          const msg = err.response?.data?.error || err.message;
+          alert("Importda xatolik yuz berdi: " + msg); 
+          console.error("Import Error:", err);
+      }
       setLoading(false);
     };
     reader.readAsBinaryString(file);
