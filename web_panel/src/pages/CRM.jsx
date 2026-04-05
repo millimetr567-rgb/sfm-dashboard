@@ -19,6 +19,7 @@ export default function CRM() {
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newLimit, setNewLimit] = useState(10000);
+  const [newTelegramUsername, setNewTelegramUsername] = useState('');
 
   const [selectedClient, setSelectedClient] = useState(null);
   const [history, setHistory] = useState({ orders: [], payments: [] });
@@ -54,12 +55,13 @@ export default function CRM() {
         name: newName, 
         phone: newPhone || '', 
         address: newAddress || '',
-        creditLimit: parseFloat(newLimit) || 0
+        creditLimit: parseFloat(newLimit) || 0,
+        telegramUsername: newTelegramUsername || ''
       });
       alert('Mijoz saqlandi');
       fetchClients();
       setShowAdd(false);
-      setNewId(''); setNewName(''); setNewPhone(''); setNewAddress(''); setNewLimit(10000);
+      setNewId(''); setNewName(''); setNewPhone(''); setNewAddress(''); setNewLimit(10000); setNewTelegramUsername('');
     } catch (e) { 
       const msg = e.response?.data?.error || "Xato yuz berdi";
       alert(msg); 
@@ -119,6 +121,7 @@ export default function CRM() {
             <div className="form-group"><label>Telefon</label><input type="text" className="form-control" value={newPhone} onChange={e => setNewPhone(e.target.value)} /></div>
             <div className="form-group"><label>Manzil</label><input type="text" className="form-control" value={newAddress} onChange={e => setNewAddress(e.target.value)} /></div>
             <div className="form-group"><label>Qarz Limiti ($)</label><input type="number" className="form-control" value={newLimit} onChange={e => setNewLimit(e.target.value)} /></div>
+            <div className="form-group"><label>Telegram Username (@username)</label><input type="text" className="form-control" value={newTelegramUsername} onChange={e => setNewTelegramUsername(e.target.value)} placeholder="@username" /></div>
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{t('action_save')}</button>
               <button type="button" onClick={() => setShowAdd(false)} className="btn btn-secondary">{t('action_cancel')}</button>
@@ -138,7 +141,10 @@ export default function CRM() {
                 <div style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}><UserCircle size={24} color="var(--primary)"/></div>
                 <div>
                   <div style={{ fontWeight: 'bold' }}>{c.name} {c.customId && <small style={{ color: 'var(--text-muted)' }}>#{c.customId}</small>}</div>
-                  <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>{c.phone || '-'} | {c.address || '-'}</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+                    {c.phone || '-'} | {c.address || '-'} 
+                    {c.telegramUsername && <span style={{ color: 'var(--secondary)', marginLeft: '8px' }}>({c.telegramUsername})</span>}
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right', display: 'flex', gap: '20px', alignItems: 'center' }}>

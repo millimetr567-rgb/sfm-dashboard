@@ -16,6 +16,7 @@ export default function Agents() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('AGENT');
+  const [newPermissions, setNewPermissions] = useState(['kassa', 'order', 'debt', 'product', 'crm', 'history']);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,17 +37,27 @@ export default function Agents() {
     if (!newUsername || !newPassword) return alert("Hamma ma'lumotlar kiritilsin!");
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/admin/agents`, { username: newUsername, password: newPassword, role: newRole });
+      await axios.post(`${API_URL}/admin/agents`, { 
+        username: newUsername, 
+        password: newPassword, 
+        role: newRole,
+        permissions: newPermissions.join(',')
+      });
       alert(t('action_save'));
       fetchAgents();
       setNewUsername(''); setNewPassword('');
+      setNewPermissions(['kassa', 'order', 'debt', 'product', 'crm', 'history']);
     } catch (err) { alert("Xato: " + err.response?.data?.error); }
     setLoading(false);
   };
 
-  const updateAgent = async (id, role, password) => {
+  const updateAgent = async (id, role, password, permissions) => {
     try {
-      await axios.put(`${API_URL}/admin/agents/${id}`, { role, password: password || undefined });
+      await axios.put(`${API_URL}/admin/agents/${id}`, { 
+        role, 
+        password: password || undefined,
+        permissions: permissions || undefined
+      });
       alert(t('action_save'));
       fetchAgents();
     } catch (err) { alert("Xato"); }
@@ -88,7 +99,25 @@ export default function Agents() {
                   <option value="ADMIN">ADMIN</option>
                 </select>
               </div>
-              <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', padding: '15px' }}><UserPlus size={18} /> {loading ? t('loading') : t('action_save')}</button>
+              <div className="form-group">
+                <label className="form-label">Huquqlar (Permissions)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '10px', background: 'var(--input-bg)', borderRadius: '10px' }}>
+                  {['kassa', 'order', 'debt', 'product', 'crm', 'history'].map(p => (
+                    <label key={p} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={newPermissions.includes(p)} 
+                        onChange={(e) => {
+                          if (e.target.checked) setNewPermissions([...newPermissions, p]);
+                          else setNewPermissions(newPermissions.filter(x => x !== p));
+                        }}
+                      />
+                      {p.toUpperCase()}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', padding: '15px', marginTop: '10px' }}><UserPlus size={18} /> {loading ? t('loading') : t('action_save')}</button>
             </form>
           </div>
 
@@ -103,6 +132,11 @@ export default function Agents() {
                     </span>
                   </h4>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '5px' }}>ID: {a.id}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '8px' }}>
+                    {(a.permissions === 'all' ? ['kassa', 'order', 'debt', 'product', 'crm', 'history'] : (a.permissions || '').split(',')).map(p => (
+                        p && <span key={p} style={{ fontSize: '0.65rem', background: 'var(--input-bg)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>{p}</span>
+                    ))}
+                  </div>
                 </div>
                 {user.id !== a.id && (
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -117,8 +151,13 @@ export default function Agents() {
                     </select>
                     <button onClick={() => {
                       const p = prompt("Yangi parolni kiriting (bo'sh qolsa o'zgarmaydi):");
-                      if (p !== null) updateAgent(a.id, a.role, p);
+                      if (p !== null) updateAgent(a.id, a.role, p, a.permissions);
                     }} className="btn btn-secondary" style={{ padding: '10px' }}>🔐</button>
+                    <button onClick={() => {
+                        const current = (a.permissions === 'all' ? 'kassa,order,debt,product,crm,history' : (a.permissions || ''));
+                        const p = prompt("Huquqlarni kiriting (vergul bilan ajrating: kassa,order,debt,product,crm,history):", current);
+                        if (p !== null) updateAgent(a.id, a.role, '', p);
+                    }} className="btn btn-secondary" style={{ padding: '10px' }}>🛠️</button>
                     <button onClick={() => deleteAgent(a.id)} className="btn btn-danger" style={{ padding: '10px' }}><Trash2 size={18} /></button>
                   </div>
                 )}

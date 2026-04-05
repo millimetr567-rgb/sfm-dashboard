@@ -159,11 +159,11 @@ export default function CashRegister() {
   };
 
   const inputStyle = {
-    background: '#1A1A1A',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--input-bg)',
+    border: 'var(--glass-border)',
     borderRadius: '12px',
     padding: '14px',
-    color: '#fff',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     width: '100%',
     outline: 'none',
@@ -171,37 +171,37 @@ export default function CashRegister() {
 
   const labelStyle = {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'var(--text-muted)',
     fontWeight: '500',
     marginLeft: '5px'
   };
 
   return (
-    <div style={{ background: '#0D0D0D', minHeight: '100vh', color: '#fff', padding: '15px' }}>
+    <div style={{ background: 'var(--bg-color)', minHeight: '100vh', color: 'var(--text-main)', padding: '15px' }}>
       {/* Client Selection Card */}
-      <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '15px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '15px', marginBottom: '15px', border: 'var(--glass-border)' }}>
         <h4 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Wallet size={20} color="#6366f1" /> Mijozni tanlang
+            <Wallet size={20} color="var(--primary)" /> Mijozni tanlang
         </h4>
         <select 
             style={inputStyle} 
             value={clientId} 
             onChange={(e) => handleClientChange(e.target.value)}
         >
-            <option value="">-- Tanlash --</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="" style={{ background: 'var(--bg-surface)' }}>-- Tanlash --</option>
+            {clients.map(c => <option key={c.id} value={c.id} style={{ background: 'var(--bg-surface)' }}>{c.name}</option>)}
         </select>
         
         {selectedClient && (
-            <div style={{ marginTop: '15px', padding: '12px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ marginTop: '15px', padding: '12px', background: 'var(--input-bg)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', border: 'var(--glass-border)' }}>
                 <div>
-                    <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Balans</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: selectedClient.currentDebt > 0 ? '#ef4444' : '#10b981' }}>
-                        ${selectedClient.currentDebt?.toLocaleString()} | {(selectedClient.currentDebt * p(kurs)).toLocaleString()} UZS
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Balans</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: (selectedClient.currentDebt || 0) > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                        ${selectedClient.currentDebt?.toLocaleString()} | {((selectedClient.currentDebt || 0) * p(kurs)).toLocaleString()} UZS
                     </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Oxirgi to'lov</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Oxirgi to'lov</div>
                     <div style={{ fontSize: '0.85rem' }}>{selectedClient.lastPaymentDate ? new Date(selectedClient.lastPaymentDate).toLocaleDateString() : '—'}</div>
                 </div>
             </div>
@@ -214,7 +214,7 @@ export default function CashRegister() {
             <label style={labelStyle}>Naqd (So'm)</label>
             <div style={{ position: 'relative' }}>
                 <input type="number" step="any" placeholder="0" style={inputStyle} value={cash} onChange={e => setCash(e.target.value)} />
-                {cash && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setCash('')} />}
+                {cash && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setCash('')} />}
             </div>
         </div>
 
@@ -222,7 +222,7 @@ export default function CashRegister() {
             <label style={labelStyle}>Terminal</label>
             <div style={{ position: 'relative' }}>
                 <input type="number" step="any" placeholder="0" style={inputStyle} value={terminal} onChange={e => setTerminal(e.target.value)} />
-                {terminal && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setTerminal('')} />}
+                {terminal && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setTerminal('')} />}
             </div>
         </div>
 
@@ -230,7 +230,7 @@ export default function CashRegister() {
             <label style={labelStyle}>Click / Payme</label>
             <div style={{ position: 'relative' }}>
                 <input type="number" step="any" placeholder="0" style={inputStyle} value={click} onChange={e => setClick(e.target.value)} />
-                {click && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setClick('')} />}
+                {click && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setClick('')} />}
             </div>
         </div>
 
@@ -238,7 +238,7 @@ export default function CashRegister() {
             <label style={labelStyle}>Valyuta ($)</label>
             <div style={{ position: 'relative' }}>
                 <input type="number" step="any" placeholder="0" style={inputStyle} value={usd} onChange={e => setUsd(e.target.value)} />
-                {usd && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setUsd('')} />}
+                {usd && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setUsd('')} />}
             </div>
         </div>
 
@@ -246,20 +246,20 @@ export default function CashRegister() {
             <label style={labelStyle}>Bank O'tkazmasi</label>
             <div style={{ position: 'relative' }}>
                 <input type="number" step="any" placeholder="0" style={inputStyle} value={bank} onChange={e => setBank(e.target.value)} />
-                {bank && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setBank('')} />}
+                {bank && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', color: 'var(--text-muted)' }} onClick={() => setBank('')} />}
             </div>
         </div>
 
         {/* Currency & Conversion */}
-        <div style={{ background: '#1A1A1A', padding: '15px', borderRadius: '15px', margin: '15px 0' }}>
+        <div style={{ background: 'var(--bg-surface)', padding: '15px', borderRadius: '15px', margin: '15px 0', border: 'var(--glass-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <label style={labelStyle}>Valyuta kursi</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.8rem' }}>Konvertatsiya</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Konvertatsiya</span>
                     <input type="checkbox" checked={convert} onChange={e => setConvert(e.target.checked)} style={{ width: '18px', height: '18px' }} />
                 </div>
             </div>
-            <input type="number" style={{ ...inputStyle, background: '#0D0D0D' }} value={kurs} onChange={e => setKurs(e.target.value)} />
+            <input type="number" style={{ ...inputStyle, background: 'var(--bg-color)' }} value={kurs} onChange={e => setKurs(e.target.value)} />
         </div>
 
         {/* Deductions */}
@@ -279,7 +279,7 @@ export default function CashRegister() {
             <textarea style={{ ...inputStyle, minHeight: '80px' }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="..."></textarea>
         </div>
 
-        {error && <div style={{ color: '#ef4444', padding: '10px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '10px', marginTop: '10px', fontSize: '0.9rem' }}>{error}</div>}
+        {error && <div style={{ color: 'var(--danger)', padding: '10px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '10px', marginTop: '10px', fontSize: '0.9rem' }}>{error}</div>}
       </form>
 
       {/* Sticky Bottom Bar */}
@@ -288,20 +288,21 @@ export default function CashRegister() {
         bottom: 0, 
         left: 0, 
         right: 0, 
-        background: '#1A1A1A', 
+        background: 'var(--bg-surface)', 
         padding: '15px 20px', 
-        borderTop: '1px solid rgba(255,255,255,0.1)', 
+        borderTop: 'var(--glass-border)', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        zIndex: 100
+        zIndex: 100,
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.1)'
       }}>
         <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>JAMI SUMMA</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#6366f1' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>JAMI SUMMA</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>
                 {sums.uzs.toLocaleString()} <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>UZS</span>
             </div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 ≈ ${sums.usd.toLocaleString()}
             </div>
         </div>
@@ -310,7 +311,7 @@ export default function CashRegister() {
             onClick={handleSubmit}
             disabled={loading || !clientId}
             style={{ 
-                background: '#6366f1', 
+                background: 'var(--primary)', 
                 color: '#fff', 
                 border: 'none', 
                 padding: '15px 30px', 
@@ -319,7 +320,8 @@ export default function CashRegister() {
                 boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                opacity: (loading || !clientId) ? 0.5 : 1
             }}
         >
             {loading ? '...' : <><CheckCircle size={18}/> SAQLASH</>}

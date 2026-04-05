@@ -17,19 +17,30 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const menuItems = [
-    { to: '/', icon: <Home size={20}/>, label: t('dashboard') },
-    { to: '/new-order', icon: <ShoppingCart size={20}/>, label: t('new_order') },
-    { to: '/debt', icon: <Wallet size={20}/>, label: t('debt') },
-    { to: '/products', icon: <Package size={20}/>, label: t('products') },
-    { to: '/crm', icon: <Users size={20}/>, label: t('crm') },
-    { to: '/orders', icon: <History size={20}/>, label: t('history') },
+    { to: '/', icon: <Home size={20}/>, label: t('dashboard'), key: 'all' },
+    { to: '/new-order', icon: <ShoppingCart size={20}/>, label: t('new_order'), key: 'order' },
+    { to: '/debt', icon: <Wallet size={20}/>, label: t('debt'), key: 'debt' },
+    { to: '/products', icon: <Package size={20}/>, label: t('products'), key: 'product' },
+    { to: '/crm', icon: <Users size={20}/>, label: t('crm'), key: 'crm' },
+    { to: '/orders', icon: <History size={20}/>, label: t('history'), key: 'history' },
   ];
 
   const adminItems = [
-    { to: '/agents', icon: <ShieldAlert size={20}/>, label: t('agents') },
-    { to: '/cash-register', icon: <Receipt size={20}/>, label: t('cash') },
-    { to: '/settings', icon: <Settings size={20}/>, label: t('settings') },
+    { to: '/agents', icon: <ShieldAlert size={20}/>, label: t('agents'), key: 'admin' },
+    { to: '/cash-register', icon: <Receipt size={20}/>, label: t('cash'), key: 'kassa' },
+    { to: '/settings', icon: <Settings size={20}/>, label: t('settings'), key: 'admin' },
   ];
+
+  const hasPermission = (key) => {
+    if (isAdmin) return true;
+    if (!user?.permissions) return false;
+    if (user.permissions === 'all') return true;
+    const perms = user.permissions.split(',');
+    return perms.includes(key) || key === 'all';
+  };
+
+  const filteredMenuItems = menuItems.filter(item => hasPermission(item.key));
+  const filteredAdminItems = adminItems.filter(item => hasPermission(item.key));
 
   const closeSidebar = () => setMobileOpen(false);
 
@@ -58,7 +69,7 @@ export default function Layout() {
         
         <nav style={{ flex: 1, padding: '20px 0', overflowY: 'auto' }}>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '0 12px' }}>
-            {menuItems.map(item => (
+            {filteredMenuItems.map(item => (
               <li key={item.to}>
                 <NavLink 
                   to={item.to} 
@@ -78,12 +89,12 @@ export default function Layout() {
               </li>
             ))}
             
-            {isAdmin && (
+            {filteredAdminItems.length > 0 && (
               <>
                 <div style={{ margin: '20px 16px 10px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  {t('admin_panel')}
+                  {isAdmin ? t('admin_panel') : 'Panel'}
                 </div>
-                {adminItems.map(item => (
+                {filteredAdminItems.map(item => (
                   <li key={item.to}>
                     <NavLink 
                       to={item.to} 
@@ -125,20 +136,38 @@ export default function Layout() {
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--bg-surface)', padding: '5px 10px', borderRadius: '8px', border: 'var(--glass-border)' }}>
-              <Globe size={16} color="var(--text-muted)" />
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '5px', 
+                background: 'var(--bg-surface)', 
+                padding: '5px 12px', 
+                borderRadius: '12px', 
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <Globe size={16} color="var(--primary)" />
               <select 
                 value={lang} 
                 onChange={(e) => setLang(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', outline: 'none', cursor: 'pointer', fontFamily: 'Inter' }}
+                style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: 'var(--text-main)', 
+                    outline: 'none', 
+                    cursor: 'pointer', 
+                    fontFamily: 'Inter',
+                    fontSize: '0.85rem',
+                    fontWeight: '600'
+                }}
               >
-                <option value="uz">UZB</option>
-                <option value="ru">RUS</option>
-                <option value="en">ENG</option>
+                <option value="uz" style={{ background: 'var(--bg-surface)' }}>UZB</option>
+                <option value="ru" style={{ background: 'var(--bg-surface)' }}>RUS</option>
+                <option value="en" style={{ background: 'var(--bg-surface)' }}>ENG</option>
               </select>
             </div>
             
-            <button onClick={toggleTheme} className="btn-icon">
+            <button onClick={toggleTheme} className="btn-icon" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px' }}>
               {theme === 'dark' ? <Sun size={20} color="#f59e0b" /> : <Moon size={20} color="#6366f1" />}
             </button>
           </div>

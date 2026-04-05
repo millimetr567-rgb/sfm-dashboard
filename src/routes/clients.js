@@ -30,7 +30,7 @@ module.exports = async function (fastify, opts) {
   })
 
   fastify.post('/', async (request, reply) => {
-    const { name, phone, address, creditLimit, telegramGroupId, customId } = request.body
+    const { name, phone, address, creditLimit, telegramGroupId, customId, telegramUsername } = request.body
     
     let generatedId = (customId && customId.trim()) ? customId.trim() : null;
     
@@ -53,14 +53,15 @@ module.exports = async function (fastify, opts) {
         phone: phone || null,
         address: address || null,
         creditLimit: finalLimit,
-        telegramGroupId: telegramGroupId || null
+        telegramGroupId: telegramGroupId || null,
+        telegramUsername: telegramUsername || null
       }
     })
   })
 
   fastify.put('/:id', async (request, reply) => {
     const { id } = request.params
-    const { name, phone, address, creditLimit, status, telegramGroupId, telegramUserId, customId } = request.body
+    const { name, phone, address, creditLimit, status, telegramGroupId, telegramUserId, customId, telegramUsername } = request.body
     
     return fastify.prisma.client.update({
       where: { id },
@@ -72,7 +73,8 @@ module.exports = async function (fastify, opts) {
         creditLimit: creditLimit !== undefined ? parseFloat(creditLimit) : undefined,
         status,
         telegramGroupId,
-        telegramUserId
+        telegramUserId,
+        telegramUsername
       }
     })
   })

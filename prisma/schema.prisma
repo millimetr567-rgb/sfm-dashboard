@@ -18,6 +18,7 @@ model Agent {
   username     String   @unique
   passwordHash String
   role         String   @default("AGENT") // AGENT, ADMIN
+  permissions  String   @default("all")   // Comma-separated: kassa,order,debt,product,crm,history,all
   orders       Order[]
   createdAt    DateTime @default(now())
 }
@@ -31,8 +32,9 @@ model Client {
   creditLimit  Float     @default(10000) // Default in USD
   currentDebt  Float     @default(0)    // In USD
   status       String    @default("ACTIVE") // ACTIVE, BLACKLIST
-  telegramGroupId String?
-  telegramUserId  String?   // Telegram User ID (from bot start)
+  telegramGroupId  String?
+  telegramUserId   String?   // Telegram User ID (from bot start)
+  telegramUsername String?   // Telegram Username (e.g., @user)
   orders       Order[]
   payments     Payment[]
   lateCount    Int       @default(0)

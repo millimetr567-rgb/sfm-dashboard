@@ -18,21 +18,26 @@ module.exports = async function (fastify, opts) {
 
   // Create Agent
   fastify.post('/agents', async (request, reply) => {
-      const { username, password, role } = request.body
+      const { username, password, role, permissions } = request.body
       const existing = await fastify.prisma.agent.findUnique({ where: { username } })
       if (existing) return reply.code(400).send({ error: 'Ushbu login band!' })
       const passwordHash = await bcrypt.hash(password, 10)
       const agent = await fastify.prisma.agent.create({
-          data: { username, passwordHash, role: role || 'AGENT' }
+          data: { 
+              username, 
+              passwordHash, 
+              role: role || 'AGENT', 
+              permissions: permissions || 'all' 
+          }
       })
-      return { id: agent.id, username: agent.username, role: agent.role }
+      return { id: agent.id, username: agent.username, role: agent.role, permissions: agent.permissions }
   })
 
   // Update Agent
   fastify.put('/agents/:id', async (request, reply) => {
       const { id } = request.params
-      const { password, role } = request.body
-      let data = { role }
+      const { password, role, permissions } = request.body
+      let data = { role, permissions }
       if (password) {
           data.passwordHash = await bcrypt.hash(password, 10)
       }
