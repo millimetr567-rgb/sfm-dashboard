@@ -155,7 +155,8 @@ class TelegramService {
         const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         
         if (chatIds.length === 0) {
-            const tid = c.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+            chatIds.push('-5180118070');
+            const tid = c.telegramGroupId;
             if (tid) chatIds.push(tid);
         }
 
@@ -183,9 +184,8 @@ class TelegramService {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         if (chatIds.length === 0) {
-            const envId = process.env.DEFAULT_TELEGRAM_GROUP_ID;
-            if (envId) chatIds.push(envId);
-            else if (payment.client.telegramGroupId) chatIds.push(payment.client.telegramGroupId);
+            chatIds.push('-5180118070');
+            if (payment.client.telegramGroupId) chatIds.push(payment.client.telegramGroupId);
         }
         
         if (chatIds.length === 0) return;
@@ -232,14 +232,11 @@ class TelegramService {
   }
 
   async generateOrderPDF(order) {
-    const qrUrl = `https://sfm-mobile.uz/orders/view/${order.id}`;
-    const qrBuffer = await QRCode.toBuffer(qrUrl, { margin: 1, width: 80 });
     return new Promise((resolve) => {
       const doc = new PDFDocument({ margin: 50 });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.image(qrBuffer, 460, 50, { width: 80 });
       doc.fontSize(20).text('SFM MOBILE: BUYURTMA VARAQASI', 50, 70);
       doc.fontSize(12).moveDown()
          .text(`Zakas raqami: #${order.orderNumber || order.id.substring(0,8)}`)
@@ -267,6 +264,11 @@ class TelegramService {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         
+        if (chatIds.length === 0) {
+            chatIds.push('-5180118070');
+            if (order.client?.telegramGroupId) chatIds.push(order.client.telegramGroupId);
+        }
+
         if (chatIds.length === 0) return;
 
         const pdf = await this.generateOrderPDF(order);

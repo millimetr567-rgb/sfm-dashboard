@@ -261,7 +261,7 @@ export default function CashRegister() {
                 <input type="number" style={inputStyle} value={click} onChange={e => setClick(e.target.value)} placeholder="0" />
             </div>
             <div style={inputGroupStyle}>
-                <label style={labelStyle}><Building2 size={14}/> PERECHISLENIYE</label>
+                <label style={labelStyle}><Building2 size={14}/> PUL KO'CHIRISH</label>
                 <input type="number" style={inputStyle} value={bank} onChange={e => setBank(e.target.value)} placeholder="0" />
             </div>
             <div style={inputGroupStyle}>
@@ -269,6 +269,22 @@ export default function CashRegister() {
                 <input type="number" style={inputStyle} value={usd} onChange={e => setUsd(e.target.value)} placeholder="0" />
             </div>
         </div>
+
+        {/* Dynamic Debt Display */}
+        {orderId && pendingOrders.find(o => o.id === orderId) && (
+            <div style={{ padding: '10px 15px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '10px', marginBottom: '20px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--warning)', fontWeight: 'bold' }}>Jami to'lanmoqda:</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>${sums.usd.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--danger)', fontWeight: 'bold' }}>Qarzga yozildi (Qoldi):</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--danger)' }}>
+                        ${Math.max(0, pendingOrders.find(o => o.id === orderId).amount - sums.usd).toFixed(2)}
+                    </span>
+                </div>
+            </div>
+        )}
 
         {/* Deductions */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

@@ -207,10 +207,15 @@ export default function NewOrder() {
             <div className={`h-icon-blue ${!selectedClient ? 'animate-pulse' : ''}`}><Users size={24}/></div>
             <div className="h-text">
                <div className="h-label">MIJOZ TANLASH</div>
-               <div className={`h-val ${selectedClient ? 'h-val-active' : 'h-val-empty'}`}>
-                 {selectedClient ? selectedClient.name : 'TANLANMAGAN'}
+               <div className={`h-val ${selectedClient ? 'h-val-active' : 'h-val-empty'}`} style={{ fontSize: '1rem', whiteSpace: 'nowrap' }}>
+                 {selectedClient ? `${selectedClient.name} (${selectedClient.customId || selectedClient.phone || ''})` : 'TANLANMAGAN'}
                </div>
-               {selectedClient && <div className="h-sublabel">${selectedClient.currentDebt?.toLocaleString()} qarz</div>}
+               {selectedClient && (
+                 <div className="h-sublabel" style={{ marginTop: '4px', display: 'flex', gap: '8px', fontSize: '0.75rem' }}>
+                   <span style={{ color: 'var(--danger)' }}>Qarz: ${selectedClient.currentDebt?.toLocaleString()}</span> | 
+                   <span style={{ color: 'var(--success)' }}>Limit: ${selectedClient.creditLimit?.toLocaleString()}</span>
+                 </div>
+               )}
             </div>
           </div>
           <div className="h-cell h-cell-clickable" onClick={() => selectedClient && setShowStatement(true)}>
