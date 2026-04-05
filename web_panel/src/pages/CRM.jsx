@@ -116,12 +116,12 @@ export default function CRM() {
         <div className="card glass-panel" style={{ marginBottom: '25px', padding: '20px', borderLeft: '5px solid var(--secondary)' }}>
           <h3>{t('add_new')}</h3>
           <form onSubmit={addClient} className="responsive-grid" style={{ marginTop: '15px' }}>
-            <div className="form-group"><label className="form-label">Mijoz ID # (ixtiyoriy)</label><input type="text" className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="Masalan: 3M1085" /></div>
-            <div className="form-group"><label className="form-label">F.I.O / Nomi *</label><input type="text" className="form-control" value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Mijoz ismi..." /></div>
-            <div className="form-group"><label className="form-label">Telefon</label><input type="text" className="form-control" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+998..." /></div>
-            <div className="form-group"><label className="form-label">Manzil</label><input type="text" className="form-control" value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder="Shahar, tuman..." /></div>
-            <div className="form-group"><label className="form-label">Qarz Limiti ($)</label><input type="number" className="form-control" value={newLimit} onChange={e => setNewLimit(e.target.value)} /></div>
-            <div className="form-group"><label className="form-label">Telegram Username</label><input type="text" className="form-control" value={newTelegramUsername} onChange={e => setNewTelegramUsername(e.target.value)} placeholder="@username" /></div>
+            <div className="form-group"><label className="form-label">Mijoz ID # (ixtiyoriy)</label><input type="text" className="form-control" value={newId} onChange={e => setNewId(e.target.value)} placeholder="Masalan: 3M1085" style={{ fontSize: '1.05rem', padding: '14px 16px' }} /></div>
+            <div className="form-group"><label className="form-label">F.I.O / Nomi *</label><input type="text" className="form-control" value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Mijoz ismi..." style={{ fontSize: '1.05rem', padding: '14px 16px' }} /></div>
+            <div className="form-group"><label className="form-label">Telefon</label><input type="text" className="form-control" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+998..." style={{ fontSize: '1.05rem', padding: '14px 16px' }} /></div>
+            <div className="form-group"><label className="form-label">Manzil</label><input type="text" className="form-control" value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder="Shahar, tuman..." style={{ fontSize: '1.05rem', padding: '14px 16px' }} /></div>
+            <div className="form-group"><label className="form-label">Qarz Limiti ($)</label><input type="number" className="form-control" value={newLimit} onChange={e => setNewLimit(e.target.value)} style={{ fontSize: '1.05rem', padding: '14px 16px' }} /></div>
+            <div className="form-group"><label className="form-label">Telegram Username</label><input type="text" className="form-control" value={newTelegramUsername} onChange={e => setNewTelegramUsername(e.target.value)} placeholder="@username" style={{ fontSize: '1.05rem', padding: '14px 16px' }} /></div>
             <div className="mobile-full-width" style={{ display: 'flex', gap: '10px' }}>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{t('action_save')}</button>
               <button type="button" onClick={() => setShowAdd(false)} className="btn btn-secondary">{t('action_cancel')}</button>
