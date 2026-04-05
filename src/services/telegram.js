@@ -267,12 +267,6 @@ class TelegramService {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         
-        if (chatIds.length === 0) {
-            const envId = process.env.DEFAULT_TELEGRAM_GROUP_ID;
-            if (envId) chatIds.push(envId);
-            else if (order.client.telegramGroupId) chatIds.push(order.client.telegramGroupId);
-        }
-        
         if (chatIds.length === 0) return;
 
         const pdf = await this.generateOrderPDF(order);

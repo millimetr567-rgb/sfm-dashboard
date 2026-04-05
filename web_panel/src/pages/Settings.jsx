@@ -142,8 +142,12 @@ export default function Settings() {
              <form onSubmit={handleSaveSettings} className="animate-fade-in">
                 <section style={{ marginBottom: '30px' }}>
                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--primary)' }}>
-                        <Smartphone size={20} /> Telegram Bot Integratsiyasi
+                        <Send size={20} /> SMS va Telegram sozlamalari
                     </h4>
+
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', padding: '15.5px', borderRadius: '12px', marginBottom: '25px', color: 'var(--danger)', fontSize: '0.9rem', fontWeight: '500' }}>
+                        <strong>IMPORTANT Action Required:</strong> Since the Chat ID changed, please go to the "SMS va Telegram sozlamalari" section in the Admin panel and update the Chat IDs. You can find the new ID by sending /start to the bot in your group.
+                    </div>
                     
                     <div className="form-group" style={{ marginBottom: '25px' }}>
                         <label className="form-label" style={{ color: 'rgba(255,255,255,0.7)' }}>Telegram Bot Token (Majburiy)</label>
