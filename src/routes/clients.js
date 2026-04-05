@@ -31,7 +31,8 @@ module.exports = async function (fastify, opts) {
 
   // Create Client
   fastify.post('/', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('crm'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('crm') || request.user.permissions === 'all'));
     if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { name, phone, address, creditLimit, telegramGroupId, customId, telegramUsername } = request.body
     
@@ -49,22 +50,29 @@ module.exports = async function (fastify, opts) {
     const parsedLimit = parseFloat(creditLimit);
     const finalLimit = isNaN(parsedLimit) ? 0 : parsedLimit;
 
-    return fastify.prisma.client.create({
-      data: {
-        customId: generatedId || null,
-        name,
-        phone: phone || null,
-        address: address || null,
-        creditLimit: finalLimit,
-        telegramGroupId: telegramGroupId || null,
-        telegramUsername: telegramUsername || null
-      }
-    })
+    try {
+        const client = await fastify.prisma.client.create({
+          data: {
+            customId: generatedId || null,
+            name,
+            phone: phone || null,
+            address: address || null,
+            creditLimit: finalLimit,
+            telegramGroupId: telegramGroupId || null,
+            telegramUsername: telegramUsername || null
+          }
+        })
+        return client
+    } catch (e) {
+        if (e.code === 'P2002') return reply.code(400).send({ error: "Ushbu ID lik mijoz allaqachon mavjud." })
+        throw e
+    }
   })
 
   // Update Client
   fastify.put('/:id', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('crm'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('crm') || request.user.permissions === 'all'));
     if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     const { name, phone, address, creditLimit, status, telegramGroupId, telegramUserId, customId, telegramUsername } = request.body
@@ -87,7 +95,8 @@ module.exports = async function (fastify, opts) {
 
   // Delete Client
   fastify.delete('/:id', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('crm'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('crm') || request.user.permissions === 'all'));
     if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     return fastify.prisma.client.delete({

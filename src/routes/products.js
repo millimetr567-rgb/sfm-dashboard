@@ -7,30 +7,37 @@ module.exports = async function (fastify, opts) {
     })
   })
 
-  // Create Single Product (Admin or Agent with 'product' permission)
+  // Create Single Product (Admin or Agent with 'product' or 'all' permission)
   fastify.post('/', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('product') || request.user.permissions === 'all'));
     if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { code, name, group, guarantee, costPrice, sellPrice, stock, minStock } = request.body
     
     if (!name) return reply.code(400).send({ error: 'Mahsulot nomi kiritilishi shart' })
 
-    const product = await fastify.prisma.product.create({
-      data: {
-        code: code ? String(code).trim() : null,
-        name, group, guarantee,
-        costPrice: parseFloat(costPrice) || 0,
-        sellPrice: parseFloat(sellPrice) || 0,
-        stock: parseFloat(stock) || 0,
-        minStock: parseFloat(minStock) || 0
-      }
-    })
-    return product
+    try {
+        const product = await fastify.prisma.product.create({
+          data: {
+            code: code ? String(code).trim() : null,
+            name, group, guarantee,
+            costPrice: parseFloat(costPrice) || 0,
+            sellPrice: parseFloat(sellPrice) || 0,
+            stock: parseFloat(stock) || 0,
+            minStock: parseFloat(minStock) || 0
+          }
+        })
+        return product
+    } catch (e) {
+        if (e.code === 'P2002') return reply.code(400).send({ error: "Ushbu koddagi mahsulot allaqachon mavjud." })
+        throw e
+    }
   })
 
   // Bulk upsert products (from Excel)
   fastify.post('/bulk', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('product') || request.user.permissions === 'all'));
     if (!isAllowed) {
       return reply.code(403).send({ error: 'Faqat ruxsat berilgan foydalanuvchilar uchun!' })
     }
@@ -132,7 +139,8 @@ module.exports = async function (fastify, opts) {
 
   // Update Single Product
   fastify.put('/:id', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('product') || request.user.permissions === 'all'));
     if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     const { code, name, costPrice, sellPrice, stock, minStock, group, guarantee } = request.body
@@ -154,7 +162,8 @@ module.exports = async function (fastify, opts) {
 
   // Delete Single Product
   fastify.delete('/:id', async (request, reply) => {
-    const isAllowed = request.user.role === 'ADMIN' || (request.user.permissions && request.user.permissions.includes('product'));
+    const isAllowed = request.user.role === 'ADMIN' || 
+                      (request.user.permissions && (request.user.permissions.includes('product') || request.user.permissions === 'all'));
     if (!isAllowed) return reply.code(403).send({ error: 'Ruxsat yo\'q!' })
     const { id } = request.params
     await fastify.prisma.product.delete({ where: { id } })

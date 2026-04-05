@@ -84,14 +84,14 @@ export default function Products() {
             return found ? row[found] : null;
           };
 
-          const name = findKey(['nomi', 'наименование', 'name']);
+          const name = findKey(['nomi', 'наименование', 'name', 'название', 'tovar']);
           if (!name) continue;
 
-          const code = findKey(['kodi', 'kod', 'код']);
-          const groupExplicit = findKey(['guruh', 'группа']);
-          const cost = findKey(['tannarx', 'себестоимост']);
-          const sell = findKey(['sotish', 'narxi', 'narx', 'цена']);
-          const stk = findKey(['sklad', 'остаток', 'soni', 'son', 'qoldiq', 'miqdor']);
+          const code = findKey(['kodi', 'kod', 'код', 'artikul', 'code']);
+          const groupExplicit = findKey(['guruh', 'группа', 'group', 'kategoriya']);
+          const cost = findKey(['tannarx', 'себестоимост', 'cost', 'вход']);
+          const sell = findKey(['sotish', 'narxi', 'narx', 'цена', 'sell', 'price']);
+          const stk = findKey(['sklad', 'остаток', 'soni', 'son', 'qoldiq', 'miqdor', 'stock', 'количество']);
           const minStk = findKey(['min', 'zapas', 'minimum']);
 
           const isHeader = (cost === null || cost === undefined) && (sell === null || sell === undefined) && (stk === null || stk === undefined) && !code;
