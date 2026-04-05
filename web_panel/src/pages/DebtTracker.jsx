@@ -131,13 +131,25 @@ export default function DebtTracker() {
                 {loadingHistory ? <div style={{ textAlign: 'center', padding: '20px' }}>{t('loading')}</div> : (
                   <div className="responsive-grid">
                      <div className="card">
-                        <h5 style={{ color: 'var(--warning)', marginBottom: '10px' }}>{t('orders')}</h5>
-                        {history.orders.map(o => (
-                          <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-color)' }}>
-                            <span>#{o.orderNumber || o.id.substring(0,6)} <small style={{ color: 'var(--text-muted)' }}>({new Date(o.createdAt).toLocaleDateString()})</small></span>
-                            <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>+${o.amount}</span>
-                          </div>
-                        ))}
+                        <h5 style={{ color: 'var(--warning)', marginBottom: '15px' }}>{t('orders')}</h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                          {history.orders.map(o => (
+                            <div key={o.id} style={{ padding: '12px', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', background: 'rgba(255,255,255,0.02)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '5px' }}>
+                                <span style={{ fontWeight: 'bold' }}>#{o.orderNumber || o.id.substring(0,6)} <small style={{ fontWeight: 'normal', opacity: 0.6 }}>({new Date(o.createdAt).toLocaleDateString()})</small></span>
+                                <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>+${o.amount.toLocaleString()}</span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {o.items?.map((it, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
+                                    <span>• {it.product?.name} ({it.quantity} ta)</span>
+                                    <span>${it.price}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                      </div>
                      <div className="card">
                         <h5 style={{ color: 'var(--success)', marginBottom: '10px' }}>{t('payments')}</h5>

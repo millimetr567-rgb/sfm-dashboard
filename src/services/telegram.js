@@ -128,6 +128,105 @@ class TelegramService {
   }
 
   // ... (Other methods: generateOrderPDF, formatTime, etc. kept as they are needed)
+  async sendConfirmationWithPDF(paymentId, msg) {
+    if (!this.fastify || !this.bot) return;
+    const payment = await this.fastify.prisma.payment.findUnique({ 
+        where: { id: paymentId },
+        include: { client: true }
+    });
+    if (!payment) return;
+
+    const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+    const chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
+    if (chatIds.length === 0) {
+        const tid = payment.client.telegramGroupId || process.env.DEFAULT_TELEGRAM_GROUP_ID;
+        if (tid) chatIds.push(tid);
+    }
+    if (chatIds.length === 0) return;
+
+    const opts = {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '✅ Tasdiqlash', callback_data: `approve_pay_${payment.id}` },
+          { text: '❌ Rad etish', callback_data: `reject_pay_${payment.id}` }
+        ]]
+      }
+    };
+
+    let pdf = null;
+    if (payment.orderId) {
+        const order = await this.fastify.prisma.order.findUnique({
+            where: { id: payment.orderId },
+            include: { items: { include: { product: true } }, client: true, agent: true }
+        });
+        if (order) pdf = await this.generateOrderPDF(order);
+    }
+
+    for (const tid of chatIds) {
+        try {
+            if (pdf) {
+                await this.bot.sendDocument(tid, pdf, { 
+                    caption: `📄 Buyurtma feli (To'lov uchun)`,
+                    filename: `Order_Payment_${payment.id.substring(0,6)}.pdf` 
+                });
+            }
+            await this.bot.sendMessage(tid, msg, opts);
+        } catch (e) { console.error(`Confirm Notify Error to ${tid}:`, e.message); }
+    }
+  }
+
+  async handlePaymentDecision(id, cid, mid, from, type) {
+    if (!this.fastify) return;
+    const adminName = from.username || from.first_name || 'Admin';
+    try {
+        const payment = await this.fastify.prisma.payment.findUnique({ 
+            where: { id },
+            include: { client: true }
+        });
+        if (!payment || payment.status !== 'WAITING_APPROVAL') return;
+
+        if (type === 'approve') {
+            await this.fastify.prisma.$transaction(async (tx) => {
+                await tx.payment.update({
+                    where: { id },
+                    data: { status: 'CONFIRMED', approvedBy: adminName, approvedAt: new Date() }
+                });
+
+                if (payment.orderId) {
+                    const order = await tx.order.findUnique({ where: { id: payment.orderId } });
+                    if (order && ['WAITING_APPROVAL', 'PENDING_PAYMENT', 'PENDING_APPROVAL'].includes(order.status)) {
+                        await tx.client.update({
+                            where: { id: payment.clientId },
+                            data: { currentDebt: { increment: order.amount } }
+                        });
+                    }
+                    await tx.order.update({
+                        where: { id: payment.orderId },
+                        data: { status: 'PAID' }
+                    });
+                }
+
+                await tx.client.update({
+                    where: { id: payment.clientId },
+                    data: { currentDebt: { decrement: payment.amount } }
+                });
+            });
+
+            await this.bot.editMessageText(`✅ *TO'LOV TASDIQLANDI*\n💰 Summa: ${payment.amount} $\n👤 Mijoz: ${payment.client.name}\nAdmin: ${adminName}`, { 
+                chat_id: cid, 
+                message_id: mid,
+                parse_mode: 'Markdown'
+            });
+        } else {
+            await this.fastify.prisma.payment.update({
+                where: { id },
+                data: { status: 'REJECTED' }
+            });
+            await this.bot.editMessageText(`❌ *TO'LOV RAD ETILDI*\nBy: ${adminName}`, { chat_id: cid, message_id: mid, parse_mode: 'Markdown' });
+        }
+    } catch (e) { console.error('Payment Decision Error:', e.message); }
+  }
   formatDate(date) {
     if (!date) return '';
     const d = new Date(date);

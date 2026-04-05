@@ -94,6 +94,17 @@ model Payment {
   orderId      String?  // Optional: link to a specific order
   amount       Float    // USD equivalent
   paymentMethod String  @default("USD") // USD, UZS, CARD, TRANSFER
+  
+  // Breakdown
+  cashAmount     Float?   @default(0)
+  terminalAmount Float?   @default(0)
+  clickAmount    Float?   @default(0)
+  bankAmount     Float?   @default(0)
+  usdAmount      Float?   @default(0)
+  changeAmount   Float?   @default(0)
+  discountAmount Float?   @default(0)
+  isConverted    Boolean? @default(true)
+
   originalAmount Float? // If paid in UZS, original amount might be 12,000,000
   exchangeRate   Float? 
   date         DateTime @default(now())

@@ -18,11 +18,11 @@ export default function Layout() {
 
   const menuItems = [
     { to: '/', icon: <Home size={20}/>, label: t('dashboard') },
-    { to: '/debt', icon: <Wallet size={20}/>, label: t('debt') },
     { to: '/new-order', icon: <ShoppingCart size={20}/>, label: t('new_order') },
+    { to: '/debt', icon: <Wallet size={20}/>, label: t('debt') },
+    { to: '/products', icon: <Package size={20}/>, label: t('products') },
     { to: '/crm', icon: <Users size={20}/>, label: t('crm') },
     { to: '/orders', icon: <History size={20}/>, label: t('history') },
-    { to: '/products', icon: <Package size={20}/>, label: t('products') },
   ];
 
   const adminItems = [

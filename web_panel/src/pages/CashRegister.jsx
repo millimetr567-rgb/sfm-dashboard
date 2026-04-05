@@ -2,232 +2,328 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../constants';
 import { useAuth } from '../context/AuthContext';
-import { useTranslation } from '../context/LanguageContext';
-import { Banknote, List, Filter, DollarSign, CreditCard, Building2, Coins, ArrowRightLeft, ShoppingCart, CheckCircle, XCircle, Plus } from 'lucide-react';
+import { 
+  Banknote, CreditCard, Smartphone, DollarSign, Building2, 
+  RefreshCcw, Info, Wallet, LogOut, CheckCircle, X, ChevronDown, Trash2
+} from 'lucide-react';
 
 export default function CashRegister() {
-  const [payments, setPayments] = useState([]);
+  const { user } = useAuth();
+  
+  // Data lists
   const [clients, setClients] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
   
-  const [selectedClient, setSelectedClient] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [amount, setAmount] = useState('');
-  const [uzsAmount, setUzsAmount] = useState('');
-  const [kurs, setKurs] = useState(localStorage.getItem('kurs') || '12800');
-  const [method, setMethod] = useState('USD (Naqd)');
-  const [exchangeRateSaving, setExchangeRateSaving] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
+  // Form State
+  const [clientId, setClientId] = useState('');
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [orderId, setOrderId] = useState('');
   
-  const { user } = useAuth();
-  const { t } = useTranslation();
-  const isAdmin = user?.role === 'ADMIN';
+  const [cash, setCash] = useState(''); // Sum
+  const [terminal, setTerminal] = useState(''); 
+  const [click, setClick] = useState('');
+  const [bank, setBank] = useState('');
+  const [usd, setUsd] = useState('');
+  const [kurs, setKurs] = useState('12200');
+  const [convert, setConvert] = useState(true);
+  
+  const [qaytarish, setQaytarish] = useState('');
+  const [bankChegirma, setBankChegirma] = useState('');
+  const [notes, setNotes] = useState('');
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => { 
     fetchData(); 
   }, []);
 
-  const saveKurs = () => {
-    localStorage.setItem('kurs', kurs);
-    setExchangeRateSaving(true);
-    setTimeout(() => setExchangeRateSaving(false), 2000);
-  };
-
   const fetchData = async () => {
-    setLoading(true);
     try {
-      const [pRes, cRes, oRes] = await Promise.all([
-        axios.get(`${API_URL}/payments`),
+      const [cRes, oRes] = await Promise.all([
         axios.get(`${API_URL}/clients`),
         axios.get(`${API_URL}/orders`)
       ]);
-      setPayments(pRes.data || []);
-      setClients(cRes.data || []);
-      // Show orders waiting for payment or approval
-      setPendingOrders((oRes.data || []).filter(o => o.status === 'PENDING_PAYMENT' || o.status === 'WAITING_APPROVAL'));
-    } catch (e) { console.error(e); }
-    setLoading(false);
+      setClients(cRes.data);
+      setPendingOrders(oRes.data.filter(o => o.status === 'PENDING_PAYMENT' || o.status === 'WAITING_APPROVAL'));
+    } catch (e) {
+      console.error("Data fetch error", e);
+    }
   };
 
-  const startPaymentForOrder = (order) => {
-    setSelectedClient(order.clientId);
-    setSelectedOrder(order);
-    setAmount(order.amount);
-    setUzsAmount((order.amount * kurs).toFixed(0));
-    setMethod('USD (Naqd)');
-    setNotes(`Buyurtma #${order.orderNumber || order.id.substring(0,8)} uchun to'lov`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleClientChange = (id) => {
+    setClientId(id);
+    const client = clients.find(c => c.id === id);
+    setSelectedClient(client);
+    // Find first pending order for this client if exists
+    const order = pendingOrders.find(o => o.clientId === id);
+    if (order) setOrderId(order.id);
+    else setOrderId('');
   };
 
-  const handleDebtWrite = async (order) => {
-    if (!window.confirm("Bu buyurtmani mijozning qarzi sifatida yozib qo'yamizmi?")) return;
-    setLoading(true);
-    try {
-      // Approve order directly (this increments currentDebt in backend)
-      await axios.post(`${API_URL}/orders/${order.id}/approve`);
-      alert("Buyurtma qarzga yozildi!");
-      fetchData();
-    } catch (e) { alert("Xato: " + (e.response?.data?.error || "Xato")); }
-    setLoading(false);
+  // Helper to parse strings safely
+  const p = (v) => {
+    if (!v) return 0;
+    return parseFloat(v.toString().replaceAll(",", ".")) || 0;
   };
 
-  const submitPayment = async (e) => {
-    e.preventDefault();
-    if (!selectedClient) return alert("Mijozni tanlang!");
+  // Calculation Logic
+  const calculateTotal = () => {
+    let totalUSD = p(usd);
     
+    // Sum basic UZS payments
+    let uzsTotal = p(cash) + p(terminal) + p(click) + p(bank);
+    
+    // Add USD converted to Sum if enabled
+    if (convert) {
+        // Here USD becomes part of the total USD equivalent correctly
+        // total = (cash+term+click+bank)/kurs + usd - (qaytarish+chegirma)/kurs
+    }
+
+    // Following user formula: total = cash + terminal + click + bank; if (convert) total += usd * kurs; total -= qaytarish; total -= bankChegirma;
+    // THIS FORMULA CALCULATES THE TOTAL IN UZS
+    let finalUzs = p(cash) + p(terminal) + p(click) + p(bank);
+    if (convert) {
+        finalUzs += p(usd) * p(kurs);
+    }
+    
+    finalUzs -= p(qaytarish);
+    finalUzs -= p(bankChegirma);
+    
+    // Convert back to USD for the database (since debt is in USD)
+    const finalUsd = finalUzs / (p(kurs) || 1);
+    
+    return {
+        uzs: finalUzs,
+        usd: finalUsd
+    };
+  };
+
+  const sums = calculateTotal();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validations
+    if (!clientId) return setError("Mijozni tanlang!");
+    if (p(usd) > 0 && p(kurs) === 0) return setError("Valyuta kursini kiriting!");
+    if (p(qaytarish) > (p(cash) + p(terminal) + p(click) + p(bank) + (convert ? p(usd) * p(kurs) : 0))) {
+        return setError("Qaytarish summasi jami to'lovdan katta!");
+    }
+    if (p(cash) < 0 || p(terminal) < 0 || p(usd) < 0 || p(bankChegirma) < 0) {
+        return setError("Manfiy son kiritish mumkin emas!");
+    }
+
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/payments`, {
-        clientId: selectedClient,
-        orderId: selectedOrder?.id || null,
-        amount: Number(amount),
-        paymentMethod: method,
-        notes: notes,
-        exchangeRate: parseFloat(kurs),
-        originalAmount: parseFloat(uzsAmount) || parseFloat(amount)
-      });
-      alert("To'lov saqlandi. Admin tasdiqlashi kutilyapti.");
-      fetchData();
+      const data = {
+        clientId,
+        orderId: orderId || null,
+        amount: sums.usd, // Save standard USD equivalent
+        notes,
+        paymentMethod: 'Kalkulyator (Mix)',
+        // Breakdown
+        cashAmount: p(cash),
+        terminalAmount: p(terminal),
+        clickAmount: p(click),
+        bankAmount: p(bank),
+        usdAmount: p(usd),
+        changeAmount: p(qaytarish),
+        discountAmount: p(bankChegirma),
+        isConverted: convert,
+        exchangeRate: p(kurs)
+      };
+
+      await axios.post(`${API_URL}/payments`, data);
+      alert("To'lov yuborildi! Admin tasdiqlashi kutilyapti.");
       resetForm();
-    } catch (e) { alert("Xato: " + (e.response?.data?.error || "Xato")); }
+      fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || "Xato yuz berdi");
+    }
     setLoading(false);
   };
 
   const resetForm = () => {
-    setSelectedClient(''); setSelectedOrder(null); setAmount(''); setUzsAmount(''); setNotes('');
+    setCash(''); setTerminal(''); setClick(''); setBank(''); setUsd(''); 
+    setQaytarish(''); setBankChegirma(''); setNotes(''); setClientId(''); 
+    setSelectedClient(null); setOrderId('');
   };
 
-  const confirmedPayments = payments.filter(p => p.status === 'CONFIRMED');
-  const stats = {
-    usd: confirmedPayments.filter(p => p.paymentMethod?.includes('USD')).reduce((a, b) => a + (b.amount || 0), 0),
-    uzs: confirmedPayments.filter(p => p.paymentMethod?.includes('UZS')).reduce((a, b) => a + (b.amount || 0), 0),
-    card: confirmedPayments.filter(p => p.paymentMethod?.includes('CARD') || p.paymentMethod?.includes('KARTA') || p.paymentMethod?.includes('Terminal')).reduce((a, b) => a + (b.amount || 0), 0),
-    bank: confirmedPayments.filter(p => p.paymentMethod?.includes('BANK') || p.paymentMethod?.includes('TRANSFER')).reduce((a, b) => a + (b.amount || 0), 0),
+  const inputGroupStyle = {
+    marginBottom: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px'
+  };
+
+  const inputStyle = {
+    background: '#1A1A1A',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '12px',
+    padding: '14px',
+    color: '#fff',
+    fontSize: '1rem',
+    width: '100%',
+    outline: 'none',
+  };
+
+  const labelStyle = {
+    fontSize: '0.85rem',
+    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '500',
+    marginLeft: '5px'
   };
 
   return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
-        <h2>💸 {t('cash')}</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', padding: '6px 15px', borderRadius: '15px', border: '1px solid var(--primary)' }}>
-           <ArrowRightLeft size={16} color="var(--primary)"/>
-           <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Kurs:</span>
-           <input type="number" className="form-control" style={{ width: '85px', border: 'none', background: 'transparent', fontWeight: 'bold', color: 'var(--primary)', padding: '0' }} value={kurs} onChange={e => setKurs(e.target.value)} />
-           <span style={{ fontSize: '0.8rem', marginRight: '5px' }}>UZS</span>
-           <button onClick={saveKurs} className="btn-icon" style={{ width: '28px', height: '28px', background: exchangeRateSaving ? 'var(--success)' : 'var(--primary)', color: 'white' }}>
-              {exchangeRateSaving ? <CheckCircle size={14}/> : <Plus size={14}/>}
-           </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
-        <div className="card glass-panel" style={{ borderBottom: '3px solid var(--primary)' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>USD NAQD</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.usd.toLocaleString()}</div>
-        </div>
-        <div className="card glass-panel" style={{ borderBottom: '3px solid var(--success)' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>UZS NAQD ($)</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.uzs.toLocaleString()}</div>
-        </div>
-        <div className="card glass-panel" style={{ borderBottom: '3px solid var(--warning)' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>KARTA / PAYME / CLICK</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.card.toLocaleString()}</div>
-        </div>
-        <div className="card glass-panel" style={{ borderBottom: '3px solid #6366f1' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>BANK O'TKAZMALARI</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>${stats.bank.toLocaleString()}</div>
-        </div>
-      </div>
-
-      <div className="responsive-grid">
-        {/* PAYMENT FORM */}
-        <div className="card" style={{ height: 'fit-content' }}>
-          <h3 style={{ marginBottom: '20px' }}>{selectedOrder ? `To'lov: #${selectedOrder.orderNumber || selectedOrder.id.substring(0,8)}` : "To'lov qabul qilish"}</h3>
-          <form onSubmit={submitPayment}>
-            <div className="form-group">
-              <label className="form-label">{t('client')}</label>
-              <select className="form-control" value={selectedClient} onChange={e => setSelectedClient(e.target.value)} required disabled={!!selectedOrder}>
-                <option value="">-- Tanlang --</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name} (${c.currentDebt})</option>)}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">To'lov Usuli</label>
-              <select className="form-control" value={method} onChange={e => setMethod(e.target.value)}>
-                <option value="USD (Naqd)">USD (Naqd)</option>
-                <option value="UZS (Naqd)">UZS (Naqd)</option>
-                <option value="KARTA (Payme/Click)">KARTA (Payme/Click)</option>
-                <option value="BANK (Bank o'tkazmalari)">BANK (Bank o'tkazmalari)</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: '15px' }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Summa ($)</label>
-                <input type="number" step="0.01" className="form-control" value={amount} onChange={e => { setAmount(e.target.value); setUzsAmount((e.target.value * kurs).toFixed(0)); }} placeholder="Dollarda" />
-                {amount > 0 && <div style={{ fontSize: '0.75rem', marginTop: '5px', color: 'var(--primary)', fontWeight: '500' }}>≈ {(amount * kurs).toLocaleString()} so'm</div>}
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Variant: UZS</label>
-                <input type="number" className="form-control" value={uzsAmount} onChange={e => { setUzsAmount(e.target.value); setAmount((e.target.value / kurs).toFixed(2)); }} placeholder="So'mda" />
-                {uzsAmount > 0 && <div style={{ fontSize: '0.75rem', marginTop: '5px', color: 'var(--success)', fontWeight: '500' }}>≈ {(uzsAmount / kurs).toFixed(2)} dollar</div>}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Izoh</label>
-              <textarea className="form-control" value={notes} onChange={e => setNotes(e.target.value)}></textarea>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-               <button type="submit" disabled={loading} className="btn btn-primary" style={{ flex: 2, padding: '15px' }}>Saqlash</button>
-               {selectedOrder && <button type="button" onClick={resetForm} className="btn btn-secondary" style={{ flex: 1 }}>Bekor qilish</button>}
-            </div>
-          </form>
-        </div>
-
-        {/* PENDING ORDERS LIST */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-           <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><ShoppingCart color="var(--primary)"/> Kutilayotgan Buyurtmalar</h3>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-             {pendingOrders.map(o => (
-               <div key={o.id} className="card glass-panel" style={{ padding: '15px', borderLeft: '4px solid var(--warning)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <div>
-                        <div style={{ fontWeight: 'bold' }}>#{o.orderNumber || o.id.substring(0,8)} | {o.client?.name}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleString()}</div>
-                        <div style={{ marginTop: '5px', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary)' }}>${o.amount.toLocaleString()}</div>
-                     </div>
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <button onClick={() => startPaymentForOrder(o)} className="btn btn-success" style={{ padding: '8px 12px', fontSize: '0.85rem' }}>💵 To'lov qilish</button>
-                        <button onClick={() => handleDebtWrite(o)} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }}>💸 Qarzga yozish</button>
-                     </div>
-                  </div>
-               </div>
-             ))}
-             {pendingOrders.length === 0 && <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Hozircha yangi buyurtmalar yo'q.</div>}
-           </div>
-           
-           <h3 style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}><List /> To'lovlar tarixi</h3>
-           <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-             {payments.map(p => (
-                <div key={p.id} className="card" style={{ padding: '12px', borderLeft: `4px solid ${p.status === 'CONFIRMED' ? 'var(--success)' : 'var(--warning)'}` }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <div style={{ flex: 1 }}>
-                         <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{p.client?.name}</div>
-                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.paymentMethod} | {new Date(p.date || p.createdAt).toLocaleDateString()}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                         <div style={{ fontWeight: 'bold' }}>${p.amount}</div>
-                         <div style={{ fontSize: '0.7rem' }}>{p.status}</div>
-                      </div>
-                   </div>
+    <div style={{ background: '#0D0D0D', minHeight: '100vh', color: '#fff', padding: '15px' }}>
+      {/* Client Selection Card */}
+      <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '15px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <h4 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Wallet size={20} color="#6366f1" /> Mijozni tanlang
+        </h4>
+        <select 
+            style={inputStyle} 
+            value={clientId} 
+            onChange={(e) => handleClientChange(e.target.value)}
+        >
+            <option value="">-- Tanlash --</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        
+        {selectedClient && (
+            <div style={{ marginTop: '15px', padding: '12px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Balans</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: selectedClient.currentDebt > 0 ? '#ef4444' : '#10b981' }}>
+                        ${selectedClient.currentDebt?.toLocaleString()} | {(selectedClient.currentDebt * p(kurs)).toLocaleString()} UZS
+                    </div>
                 </div>
-             ))}
-           </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Oxirgi to'lov</div>
+                    <div style={{ fontSize: '0.85rem' }}>{selectedClient.lastPaymentDate ? new Date(selectedClient.lastPaymentDate).toLocaleDateString() : '—'}</div>
+                </div>
+            </div>
+        )}
+      </div>
+
+      {/* Main Payment Form */}
+      <form onSubmit={handleSubmit} style={{ paddingBottom: '100px' }}>
+        <div style={inputGroupStyle}>
+            <label style={labelStyle}>Naqd (So'm)</label>
+            <div style={{ position: 'relative' }}>
+                <input type="number" step="any" placeholder="0" style={inputStyle} value={cash} onChange={e => setCash(e.target.value)} />
+                {cash && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setCash('')} />}
+            </div>
         </div>
+
+        <div style={inputGroupStyle}>
+            <label style={labelStyle}>Terminal</label>
+            <div style={{ position: 'relative' }}>
+                <input type="number" step="any" placeholder="0" style={inputStyle} value={terminal} onChange={e => setTerminal(e.target.value)} />
+                {terminal && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setTerminal('')} />}
+            </div>
+        </div>
+
+        <div style={inputGroupStyle}>
+            <label style={labelStyle}>Click / Payme</label>
+            <div style={{ position: 'relative' }}>
+                <input type="number" step="any" placeholder="0" style={inputStyle} value={click} onChange={e => setClick(e.target.value)} />
+                {click && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setClick('')} />}
+            </div>
+        </div>
+
+        <div style={inputGroupStyle}>
+            <label style={labelStyle}>Valyuta ($)</label>
+            <div style={{ position: 'relative' }}>
+                <input type="number" step="any" placeholder="0" style={inputStyle} value={usd} onChange={e => setUsd(e.target.value)} />
+                {usd && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setUsd('')} />}
+            </div>
+        </div>
+
+        <div style={inputGroupStyle}>
+            <label style={labelStyle}>Bank O'tkazmasi</label>
+            <div style={{ position: 'relative' }}>
+                <input type="number" step="any" placeholder="0" style={inputStyle} value={bank} onChange={e => setBank(e.target.value)} />
+                {bank && <X size={18} style={{ position: 'absolute', right: '15px', top: '15px', opacity: 0.5 }} onClick={() => setBank('')} />}
+            </div>
+        </div>
+
+        {/* Currency & Conversion */}
+        <div style={{ background: '#1A1A1A', padding: '15px', borderRadius: '15px', margin: '15px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <label style={labelStyle}>Valyuta kursi</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.8rem' }}>Konvertatsiya</span>
+                    <input type="checkbox" checked={convert} onChange={e => setConvert(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                </div>
+            </div>
+            <input type="number" style={{ ...inputStyle, background: '#0D0D0D' }} value={kurs} onChange={e => setKurs(e.target.value)} />
+        </div>
+
+        {/* Deductions */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}>Bank chegirma</label>
+                <input type="number" style={inputStyle} value={bankChegirma} onChange={e => setBankChegirma(e.target.value)} placeholder="0" />
+            </div>
+            <div style={inputGroupStyle}>
+                <label style={labelStyle}>Qaytarish (Change)</label>
+                <input type="number" style={inputStyle} value={qaytarish} onChange={e => setQaytarish(e.target.value)} placeholder="0" />
+            </div>
+        </div>
+
+        <div style={inputGroupStyle}>
+            <label style={labelStyle}>Izoh</label>
+            <textarea style={{ ...inputStyle, minHeight: '80px' }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="..."></textarea>
+        </div>
+
+        {error && <div style={{ color: '#ef4444', padding: '10px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '10px', marginTop: '10px', fontSize: '0.9rem' }}>{error}</div>}
+      </form>
+
+      {/* Sticky Bottom Bar */}
+      <div style={{ 
+        position: 'fixed', 
+        bottom: 0, 
+        left: 0, 
+        right: 0, 
+        background: '#1A1A1A', 
+        padding: '15px 20px', 
+        borderTop: '1px solid rgba(255,255,255,0.1)', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        zIndex: 100
+      }}>
+        <div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>JAMI SUMMA</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#6366f1' }}>
+                {sums.uzs.toLocaleString()} <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>UZS</span>
+            </div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>
+                ≈ ${sums.usd.toLocaleString()}
+            </div>
+        </div>
+        <button 
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading || !clientId}
+            style={{ 
+                background: '#6366f1', 
+                color: '#fff', 
+                border: 'none', 
+                padding: '15px 30px', 
+                borderRadius: '12px', 
+                fontWeight: 'bold',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+            }}
+        >
+            {loading ? '...' : <><CheckCircle size={18}/> SAQLASH</>}
+        </button>
       </div>
     </div>
   );
