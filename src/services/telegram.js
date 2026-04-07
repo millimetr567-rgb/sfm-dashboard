@@ -48,9 +48,7 @@ class TelegramService {
         let ids = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id && String(id).trim() !== '');
         
         if (ids.length === 0) {
-            let defId = '-5180118070';
-            if (!defId.startsWith('-100')) defId = '-100' + defId.replace('-', '');
-            ids.push(defId);
+            ids.push('-5180118070');
         }
 
         if (extraId) ids.push(extraId);
