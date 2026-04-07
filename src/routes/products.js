@@ -49,80 +49,89 @@ module.exports = async function (fastify, opts) {
 
     const results = []
     let currentGroupName = 'Boshqa'
+    let successCount = 0;
+    let failCount = 0;
     
     for (const p of products) {
       if (!p.name) continue
 
-      // Smarter detection: A row is a product if any field besides name is present
-      const hasStock = (p.stock !== undefined && p.stock !== null && p.stock !== '');
-      const hasPrice = (p.sellPrice !== undefined && p.sellPrice !== null && p.sellPrice !== '');
-      const hasCode = (p.code !== undefined && p.code !== null && p.code !== '');
-      const hasCost = (p.costPrice !== undefined && p.costPrice !== null && p.costPrice !== '');
+      // A truly empty row or a header row (only category name)
+      const hasStock = (p.stock !== undefined && p.stock !== null && String(p.stock).trim() !== '');
+      const hasPrice = (p.sellPrice !== undefined && p.sellPrice !== null && String(p.sellPrice).trim() !== '');
+      const hasCode = (p.code !== undefined && p.code !== null && String(p.code).trim() !== '');
+      const hasCost = (p.costPrice !== undefined && p.costPrice !== null && String(p.costPrice).trim() !== '');
 
-      const isHeader = !hasStock && !hasPrice && !hasCode && !hasCost;
-
-      if (isHeader) {
-          currentGroupName = p.name // Probably a category title
-          continue
-      }
-
-      const code = p.code || null
-      const group = p.group || currentGroupName
-      const guarantee = p.guarantee || null
-      const cost = parseFloat(p.costPrice) || 0
-      const sell = parseFloat(p.sellPrice) || 0
-      const stock = parseFloat(p.stock) || 0
-      const minStock = parseFloat(p.minStock) || 0
-      const productName = String(p.name || '').trim();
-      const productCode = (code !== undefined && code !== null && String(code).trim() !== '') ? String(code).trim() : null;
-      const groupName = group ? String(group).trim() : 'Boshqa';
-
-      // Skip Excel header rows if they ended up in data
-      if (productName.toLowerCase() === 'nomi' || productName.toLowerCase() === 'наименование') continue;
-      if (productName.toLowerCase() === 'tovar guruhi' || productName.toLowerCase() === 'товарная группа') continue;
-
-      let upserted = null;
-      // Match ONLY by unique code. If no code, we always CREATE to avoid losing duplicates.
-      if (productCode) {
-          upserted = await fastify.prisma.product.findUnique({ where: { code: productCode } })
-      }
-      
-      // If we found it by code, update. If not, CREATE a NEW record.
-      try {
-          const finalCode = String(productCode || '').trim();
-          const finalName = String(productName || '').trim();
-          
-          if (upserted) {
-              await fastify.prisma.product.update({
-                 where: { id: upserted.id },
-                 data: { 
-                     code: finalCode || null, 
-                     group: groupName, 
-                     guarantee, 
-                     costPrice: parseFloat(cost) || 0, 
-                     sellPrice: parseFloat(sell) || 0, 
-                     stock: parseInt(stock) || 0, 
-                     minStock: parseInt(minStock) || 0 
-                 }
-              })
-              results.push(upserted)
-          } else {
-              const created = await fastify.prisma.product.create({
-                 data: { 
-                     code: finalCode || null, 
-                     group: groupName, 
-                     guarantee, 
-                     name: finalName, 
-                     costPrice: parseFloat(cost) || 0, 
-                     sellPrice: parseFloat(sell) || 0, 
-                     stock: parseInt(stock) || 0, 
-                     minStock: parseInt(minStock) || 0 
-                 }
-              })
-              results.push(created)
+      // If it only has a name and no other data, it's a category header
+      if (!hasStock && !hasPrice && !hasCode && !hasCost) {
+          const catName = String(p.name).trim();
+          if (catName && catName.length > 1) {
+              currentGroupName = catName;
           }
+          continue;
+      }
+
+      const productName = String(p.name || '').trim();
+      if (productName.toLowerCase() === 'nomi' || productName.toLowerCase() === 'наименование') continue;
+      
+      const productCode = (p.code !== undefined && p.code !== null && String(p.code).trim() !== '') ? String(p.code).trim() : null;
+      const groupName = p.group ? String(p.group).trim() : currentGroupName;
+      const guarantee = p.guarantee || null;
+      
+      // Use parseFloat for all numeric fields to support decimals
+      const cost = parseFloat(String(p.costPrice || '0').replace(/[^0-9.]/g, '')) || 0;
+      const sell = parseFloat(String(p.sellPrice || '0').replace(/[^0-9.]/g, '')) || 0;
+      const stock = parseFloat(String(p.stock || '0').replace(/[^0-9.]/g, '')) || 0;
+      const minStock = parseFloat(String(p.minStock || '0').replace(/[^0-9.]/g, '')) || 0;
+
+      try {
+          if (productCode) {
+              const existing = await fastify.prisma.product.findUnique({ where: { code: productCode } });
+              if (existing) {
+                  await fastify.prisma.product.update({
+                      where: { id: existing.id },
+                      data: { 
+                          name: productName,
+                          group: groupName, 
+                          guarantee, 
+                          costPrice: cost, 
+                          sellPrice: sell, 
+                          stock: stock, 
+                          minStock: minStock 
+                      }
+                  });
+              } else {
+                  await fastify.prisma.product.create({
+                      data: { 
+                          code: productCode, 
+                          name: productName,
+                          group: groupName, 
+                          guarantee, 
+                          costPrice: cost, 
+                          sellPrice: sell, 
+                          stock: stock, 
+                          minStock: minStock 
+                      }
+                  });
+              }
+          } else {
+              // No code - always create a new one using name and group to avoid total redundancy
+              await fastify.prisma.product.create({
+                  data: { 
+                      code: null, 
+                      name: productName,
+                      group: groupName, 
+                      guarantee, 
+                      costPrice: cost, 
+                      sellPrice: sell, 
+                      stock: stock, 
+                      minStock: minStock 
+                  }
+              });
+          }
+          successCount++;
       } catch (err) {
-          console.error("Bulk sync error for row:", productName, "Code:", productCode, "Error:", err.message)
+          failCount++;
+          console.error(`[Bulk Import] Error at row "${productName}":`, err.message);
       }
     }
 
@@ -132,12 +141,11 @@ module.exports = async function (fastify, opts) {
           action: 'BULK_UPLOAD_PRODUCTS',
           actorId: request.user.id,
           actorRole: request.user.role,
-          metadata: JSON.stringify({ count: results.length })
+          metadata: JSON.stringify({ total: products.length, success: successCount, fail: failCount })
         }
     })
     
-    console.log(`BULK UPLOAD STATS: Total rows=${products.length}, Final synced=${results.length}`);
-    return { count: results.length, status: 'success' }
+    return { success: true, count: successCount, failed: failCount };
   })
 
   // Delete All Products (Admin only)

@@ -39,8 +39,11 @@ module.exports = async function (fastify, opts) {
     let generatedId = (customId && customId.trim()) ? customId.trim() : null;
     
     if (!generatedId) {
-      // More robust ID generation avoiding collisions
-      generatedId = 'MID-' + Date.now().toString().slice(-4) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
+      // More robust ID generation: prefix + year-month-day-hour-minute + 4 digit random
+      const now = new Date();
+      const timestamp = now.toISOString().slice(2, 10).replace(/-/g, '') + now.toISOString().slice(11, 16).replace(/:/g, ''); // YYMMDDHHmm
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000); // 4-digit random
+      generatedId = 'M-' + timestamp + '-' + randomSuffix;
     }
     
     if (!name || !name.trim()) {
@@ -64,8 +67,9 @@ module.exports = async function (fastify, opts) {
         })
         return client
     } catch (e) {
-        if (e.code === 'P2002') return reply.code(400).send({ error: "Ushbu ID lik mijoz allaqachon mavjud." })
-        throw e
+        if (e.code === 'P2002') return reply.code(400).send({ error: "Xatolik: Ushbu ID'lik mijoz allaqachon mavjud yoki tizimda duplikat bor." })
+        console.error("Create Client Error:", e);
+        return reply.code(500).send({ error: "Mijozni saqlashda kutilmagan xato: " + e.message })
     }
   })
 

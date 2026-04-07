@@ -71,32 +71,26 @@ export default function CashRegister() {
 
   // Calculation Logic
   const calculateTotal = () => {
-    let totalUSD = p(usd);
-    
-    // Sum basic UZS payments
-    let uzsTotal = p(cash) + p(terminal) + p(click) + p(bank);
-    
-    // Add USD converted to Sum if enabled
-    if (convert) {
-        // Here USD becomes part of the total USD equivalent correctly
-        // total = (cash+term+click+bank)/kurs + usd - (qaytarish+chegirma)/kurs
-    }
+    // Current formula: (cash + terminal + click + bank + (convert ? usd * kurs : 0) - qaytarish - chegirma)
+    const c = p(cash);
+    const t = p(terminal);
+    const ck = p(click);
+    const b = p(bank);
+    const u = p(usd);
+    const k = p(kurs) || 1;
+    const q = p(qaytarish);
+    const ch = p(bankChegirma);
 
-    // Following user formula: total = cash + terminal + click + bank; if (convert) total += usd * kurs; total -= qaytarish; total -= bankChegirma;
-    // THIS FORMULA CALCULATES THE TOTAL IN UZS
-    let finalUzs = p(cash) + p(terminal) + p(click) + p(bank);
+    let finalUzs = c + t + ck + b - q - ch;
     if (convert) {
-        finalUzs += p(usd) * p(kurs);
+       finalUzs += u * k;
     }
     
-    finalUzs -= p(qaytarish);
-    finalUzs -= p(bankChegirma);
-    
-    // Convert back to USD for the database (since debt is in USD)
-    const finalUsd = finalUzs / (p(kurs) || 1);
+    // Round to 2 decimal places for USD to avoid .00000001 errors
+    const finalUsd = Math.round((finalUzs / k) * 100) / 100;
     
     return {
-        uzs: finalUzs,
+        uzs: Math.round(finalUzs),
         usd: finalUsd
     };
   };

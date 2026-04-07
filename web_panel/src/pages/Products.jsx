@@ -119,9 +119,10 @@ export default function Products() {
           });
         }
 
-        await axios.post(`${API_URL}/products/bulk`, { products: finalProducts });
+        const response = await axios.post(`${API_URL}/products/bulk`, { products: finalProducts });
         fetchProducts();
-        alert("Fayl muvaffaqiyatli import qilindi! (Agar bazada borlari bo'lsa, ular yangilandi)");
+        const { count, failed } = response.data;
+        alert(`Fayl qayta ishlandi!\n✅ Muvaffaqiyatli: ${count}\n❌ Xatolik: ${failed}\n\n(Mavjud mahsulotlar yangilandi, yangilari qo'shildi)`);
       } catch (err) { 
           const msg = err.response?.data?.error || err.message;
           alert("Importda xatolik yuz berdi: " + msg); 

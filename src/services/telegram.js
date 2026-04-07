@@ -36,10 +36,31 @@ class TelegramService {
     return result;
   }
 
-  // Utility to escape Markdown special characters
   esc(text) {
     if (!text) return "";
     return String(text).replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  }
+
+  async getChatIds(extraId = null) {
+    if (!this.fastify) return [];
+    try {
+        const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
+        let ids = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id && String(id).trim() !== '');
+        
+        if (ids.length === 0) {
+            let defId = '-5180118070';
+            if (!defId.startsWith('-100')) defId = '-100' + defId.replace('-', '');
+            ids.push(defId);
+        }
+
+        if (extraId) ids.push(extraId);
+        
+        // Ensure all are strings and unique
+        return [...new Set(ids.map(id => String(id).trim()))];
+    } catch (e) {
+        console.error("[Telegram] getChatIds Error:", e.message);
+        return ['-1005180118070'];
+    }
   }
 
   initHandlers() {
@@ -151,17 +172,7 @@ class TelegramService {
   async sendPaymentNotification(p, c, u) {
     if (!this.fastify || !this.bot) return;
     try {
-        const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-        let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
-        
-        if (chatIds.length === 0) {
-            let defId = '-5180118070';
-            if (!defId.startsWith('-100')) defId = '-100' + defId.replace('-', '');
-            chatIds.push(defId);
-            const tid = c.telegramGroupId;
-            if (tid) chatIds.push(tid);
-        }
-
+        const chatIds = await this.getChatIds(c.telegramGroupId);
         if (chatIds.length === 0) return;
 
         const msg = `💸 *To'lov muvaffaqiyatli qabul qilindi!*\n\n👤 Mijoz: ${this.esc(c.name)}\n💰 Summa: ${p.amount} $\n💳 Usul: ${p.paymentMethod}\n✅ Holat: TASDIQLANDI`;
@@ -183,15 +194,7 @@ class TelegramService {
         });
         if (!payment) return;
 
-        const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
-        let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
-        if (chatIds.length === 0) {
-            let defId = '-5180118070';
-            if (!defId.startsWith('-100')) defId = '-100' + defId.replace('-', '');
-            chatIds.push(defId);
-            if (payment.client.telegramGroupId) chatIds.push(payment.client.telegramGroupId);
-        }
-        
+        const chatIds = await this.getChatIds(payment.client.telegramGroupId);
         if (chatIds.length === 0) return;
 
         const opts = {
