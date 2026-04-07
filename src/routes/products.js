@@ -51,6 +51,11 @@ module.exports = async function (fastify, opts) {
     let currentGroupName = 'Boshqa'
     let successCount = 0;
     let failCount = 0;
+
+    // OPTIMIZATION: Fetch all existing codes to avoid $N$ findUnique calls
+    const allProducts = await fastify.prisma.product.findMany({ select: { id: true, code: true } });
+    const codeMap = new Map();
+    allProducts.forEach(p => { if (p.code) codeMap.set(p.code, p.id); });
     
     for (const p of products) {
       if (!p.name) continue
@@ -77,47 +82,33 @@ module.exports = async function (fastify, opts) {
       const groupName = p.group ? String(p.group).trim() : currentGroupName;
       const guarantee = p.guarantee || null;
       
-      // Use parseFloat for all numeric fields to support decimals
-      const cost = parseFloat(String(p.costPrice || '0').replace(/[^0-9.]/g, '')) || 0;
-      const sell = parseFloat(String(p.sellPrice || '0').replace(/[^0-9.]/g, '')) || 0;
-      const stock = parseFloat(String(p.stock || '0').replace(/[^0-9.]/g, '')) || 0;
-      const minStock = parseFloat(String(p.minStock || '0').replace(/[^0-9.]/g, '')) || 0;
+      // Better numeric cleanup: Handle spaces in numbers like "12 000"
+      const cleanNum = (v) => parseFloat(String(v || '0').replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.]/g, '')) || 0;
+      const cost = cleanNum(p.costPrice);
+      const sell = cleanNum(p.sellPrice);
+      const stock = cleanNum(p.stock);
+      const minStock = cleanNum(p.minStock);
 
       try {
-          if (productCode) {
-              const existing = await fastify.prisma.product.findUnique({ where: { code: productCode } });
-              if (existing) {
-                  await fastify.prisma.product.update({
-                      where: { id: existing.id },
-                      data: { 
-                          name: productName,
-                          group: groupName, 
-                          guarantee, 
-                          costPrice: cost, 
-                          sellPrice: sell, 
-                          stock: stock, 
-                          minStock: minStock 
-                      }
-                  });
-              } else {
-                  await fastify.prisma.product.create({
-                      data: { 
-                          code: productCode, 
-                          name: productName,
-                          group: groupName, 
-                          guarantee, 
-                          costPrice: cost, 
-                          sellPrice: sell, 
-                          stock: stock, 
-                          minStock: minStock 
-                      }
-                  });
-              }
+          if (productCode && codeMap.has(productCode)) {
+              const existingId = codeMap.get(productCode);
+              await fastify.prisma.product.update({
+                  where: { id: existingId },
+                  data: { 
+                      name: productName,
+                      group: groupName, 
+                      guarantee, 
+                      costPrice: cost, 
+                      sellPrice: sell, 
+                      stock: stock, 
+                      minStock: minStock 
+                  }
+              });
           } else {
-              // No code - always create a new one using name and group to avoid total redundancy
+              // CREATE a NEW record (either NEW code or no code at all)
               await fastify.prisma.product.create({
                   data: { 
-                      code: null, 
+                      code: productCode, 
                       name: productName,
                       group: groupName, 
                       guarantee, 
