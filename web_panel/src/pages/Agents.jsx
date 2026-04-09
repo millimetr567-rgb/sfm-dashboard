@@ -188,14 +188,22 @@ export default function Agents() {
             </thead>
             <tbody>
               {logs.map(lg => {
-                const meta = lg.metadata ? JSON.parse(lg.metadata) : {};
+                let meta = {};
+                try {
+                  meta = typeof lg.metadata === 'string' ? JSON.parse(lg.metadata) : (lg.metadata || {});
+                } catch(e) { meta = { raw: lg.metadata }; }
+                
                 const date = new Date(lg.timestamp);
                 return (
                   <tr key={lg.id}>
                     <td style={{ fontSize: '0.8rem' }}>{date.toLocaleDateString()} {date.toLocaleTimeString()}</td>
-                    <td><b>{lg.actorRole}</b> ({lg.actorId.substring(0,8)})</td>
+                    <td><b>{lg.actorRole}</b> ({lg.actorId?.substring(0,8) || 'SYS'})</td>
                     <td style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{TRANSLATE_ACTION[lg.action] || lg.action}</td>
-                    <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{JSON.stringify(meta)}</td>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {Object.entries(meta).map(([k, v]) => (
+                        <div key={k}>{k}: <b>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</b></div>
+                      ))}
+                    </td>
                   </tr>
                 );
               })}

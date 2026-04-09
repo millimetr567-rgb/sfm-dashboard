@@ -271,15 +271,26 @@ export default function CashRegister() {
             <div style={{ flex: 1 }}></div>
 
             <div style={{ padding: '20px', background: 'var(--bg-card)', borderTop: '1px solid var(--border-color)' }}>
-               {error && <div style={{ color: 'var(--danger)', marginBottom: '10px', fontSize: '0.8rem' }}>{error}</div>}
+               {error && <div style={{ color: 'var(--danger)', marginBottom: '15px', fontSize: '0.85rem', padding: '10px', background: 'rgba(239,68,68,0.1)', borderRadius: '8px' }}>{error}</div>}
                <button 
                 onClick={handleSubmit} 
                 disabled={loading || !clientId} 
                 className="btn btn-primary" 
-                style={{ width: '100%', height: '56px', borderRadius: '14px', fontSize: '1.1rem' }}
+                style={{ 
+                  width: '100%', 
+                  height: '60px', 
+                  borderRadius: '16px', 
+                  fontSize: '1.2rem', 
+                  fontWeight: '800',
+                  boxShadow: '0 8px 20px rgba(99,102,241,0.3)',
+                  transition: 'all 0.2s'
+                }}
                >
-                 {loading ? 'Yuborilmoqda...' : 'TASDIQLASH VA SAQLASH'}
+                 {loading ? 'YUKLANMOQDA...' : 'TASDIQLASH VA SAQLASH'}
                </button>
+               <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '12px' }}>
+                 Tugmani bossangiz, ma'lumotlar bazaga yuboriladi va bot orqali guruhga xabar boradi.
+               </p>
             </div>
           </div>
         </div>

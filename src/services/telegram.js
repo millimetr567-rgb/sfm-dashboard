@@ -238,27 +238,68 @@ class TelegramService {
 
   async generateOrderPDF(order) {
     return new Promise((resolve) => {
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.fontSize(20).text('SFM MOBILE: BUYURTMA VARAQASI', 50, 70);
-      doc.fontSize(12).moveDown()
-         .text(`Zakas raqami: #${order.orderNumber || order.id.substring(0,8)}`)
-         .text(`Sana: ${this.formatDate(order.createdAt)}`)
-         .text(`Mijoz: ${order.client.name}`)
-         .text(`Tel: ${order.driverPhone || '-'}`)
-         .text(`To'lov: ${order.paymentMethod || 'USD'}`);
-      doc.moveDown();
-      const tableTop = 230;
-      doc.font('Helvetica-Bold').text('№', 50, tableTop).text('Mahsulot', 80, tableTop).text('Soni', 350, tableTop).text('Narxi', 410, tableTop).text('Jami', 490, tableTop);
-      doc.moveTo(50, tableTop + 15).lineTo(560, tableTop + 15).stroke();
-      let y = tableTop + 25;
+
+      // Header
+      doc.rect(0, 0, 600, 100).fill('#6366f1');
+      doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('SFM MOBILE', 40, 35);
+      doc.fontSize(10).font('Helvetica').text('TIZIM ORQALI GENERATSIYA QILINGAN CHEK', 40, 65);
+      
+      doc.fillColor('#000000').fontSize(18).font('Helvetica-Bold').text('BUYURTMA VARAQASI', 40, 120);
+      doc.fontSize(10).font('Helvetica').text(`ID: #${order.orderNumber || order.id.substring(0,8)}`, 40, 145);
+      
+      // Client Info
+      doc.rect(40, 165, 515, 60).stroke('#eeeeee');
+      doc.fontSize(9).fillColor('#666666').text('MIJOZ MA\'LUMOTLARI', 50, 175);
+      doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold').text(order.client.name, 50, 190);
+      doc.fontSize(10).font('Helvetica').text(`Tel: ${order.client.phone || '-'}`, 50, 205);
+      
+      doc.fontSize(9).fillColor('#666666').text('SANA', 400, 175);
+      doc.fontSize(10).fillColor('#000000').text(this.formatDate(order.createdAt), 400, 190);
+      doc.fontSize(9).fillColor('#666666').text('TO\'LOV USULI', 400, 205);
+      doc.fontSize(10).fillColor('#000000').text(order.paymentMethod || 'USD', 480, 205);
+
+      // Table Header
+      const tableTop = 250;
+      doc.rect(40, tableTop, 515, 25).fill('#f9fafb');
+      doc.fillColor('#374151').font('Helvetica-Bold').fontSize(10);
+      doc.text('№', 50, tableTop + 8);
+      doc.text('Mahsulot nomi', 80, tableTop + 8);
+      doc.text('Soni', 350, tableTop + 8, { width: 40, align: 'center' });
+      doc.text('Narxi', 410, tableTop + 8, { width: 60, align: 'right' });
+      doc.text('Jami', 490, tableTop + 8, { width: 60, align: 'right' });
+
+      let y = tableTop + 35;
+      doc.font('Helvetica').fontSize(10).fillColor('#000000');
+      
       order.items.forEach((it, i) => {
-        doc.font('Helvetica').text(i+1, 50, y).text(it.product.name, 80, y, { width: 260 }).text(it.quantity, 350, y).text(`${it.price} $`, 410, y).text(`${it.quantity*it.price} $`, 490, y);
+        // Stripe rows
+        if (i % 2 === 0) doc.rect(40, y-5, 515, 20).fill('#ffffff');
+        else doc.rect(40, y-5, 515, 20).fill('#fdfdfd');
+        
+        doc.fillColor('#000000');
+        doc.text(i+1, 50, y);
+        doc.text(it.product.name, 80, y, { width: 260 });
+        doc.text(it.quantity, 350, y, { width: 40, align: 'center' });
+        doc.text(`$${it.price.toLocaleString()}`, 410, y, { width: 60, align: 'right' });
+        doc.text(`$${(it.quantity * it.price).toLocaleString()}`, 490, y, { width: 60, align: 'right' });
         y += 20;
+
+        if (y > 700) { doc.addPage(); y = 50; }
       });
-      doc.font('Helvetica-Bold').text(`JAMI: ${order.amount.toFixed(2)} $`, 400, y + 20, { align: 'right', width: 150 });
+
+      // Footer / Total
+      doc.moveTo(40, y + 10).lineTo(555, y + 10).stroke('#eeeeee');
+      y += 25;
+      doc.fontSize(14).font('Helvetica-Bold').text('UMUMIY JAMI:', 300, y);
+      doc.fontSize(16).fillColor('#6366f1').text(`$${order.amount.toLocaleString()}`, 450, y, { width: 100, align: 'right' });
+      
+      y += 40;
+      doc.fontSize(8).fillColor('#999999').font('Helvetica').text('Ushbu hujjat elektron shaklda yaratilgan. Tasdiqlash bot orqali amalga oshiriladi.', 40, y, { align: 'center', width: 515 });
+
       doc.end();
     });
   }

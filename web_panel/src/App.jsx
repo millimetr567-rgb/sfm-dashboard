@@ -14,10 +14,22 @@ import Agents from './pages/Agents';
 import CashRegister from './pages/CashRegister';
 import Settings from './pages/Settings';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, permission = null }) => {
   const { user, token } = useAuth();
+  
   if (!token) return <Navigate to="/login" replace />;
-  if (adminOnly && user?.role !== 'ADMIN') return <Navigate to="/" replace />;
+  
+  if (adminOnly && user?.role !== 'ADMIN') {
+    return <Navigate to="/" replace />;
+  }
+
+  if (permission && user?.role !== 'ADMIN') {
+    const perms = user?.permissions?.split(',') || [];
+    if (!perms.includes(permission) && user?.permissions !== 'all') {
+      return <Navigate to="/" replace />;
+    }
+  }
+
   return children;
 };
 
@@ -27,13 +39,13 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
-        <Route path="debt" element={<DebtTracker />} />
-        <Route path="new-order" element={<NewOrder />} />
-        <Route path="crm" element={<CRM />} />
-        <Route path="orders" element={<OrderHistory />} />
-        <Route path="products" element={<Products />} />
+        <Route path="debt" element={<ProtectedRoute permission="debt"><DebtTracker /></ProtectedRoute>} />
+        <Route path="new-order" element={<ProtectedRoute permission="order"><NewOrder /></ProtectedRoute>} />
+        <Route path="crm" element={<ProtectedRoute permission="crm"><CRM /></ProtectedRoute>} />
+        <Route path="orders" element={<ProtectedRoute permission="history"><OrderHistory /></ProtectedRoute>} />
+        <Route path="products" element={<ProtectedRoute permission="product"><Products /></ProtectedRoute>} />
         <Route path="agents" element={<ProtectedRoute adminOnly><Agents /></ProtectedRoute>} />
-        <Route path="cash-register" element={<ProtectedRoute adminOnly><CashRegister /></ProtectedRoute>} />
+        <Route path="cash-register" element={<ProtectedRoute permission="kassa"><CashRegister /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

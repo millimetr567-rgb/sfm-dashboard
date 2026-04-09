@@ -139,46 +139,49 @@ class CronService {
     const { prisma, telegram } = this.fastify
 
     try {
-      // 1. Daily Debtors Report to Admin
-      const debtors = await prisma.client.findMany({
-         where: { currentDebt: { gt: 0 } },
-         orderBy: { currentDebt: 'desc' }
-      })
-      if (debtors.length > 0) {
-         let msg = `🔴 *Kunlik Qarzdorlar Ro'yxati*\n\n`
-         debtors.forEach(c => {
-            msg += `👤 ${c.name}: ${c.currentDebt.toLocaleString()} $\n`
-         })
-         await telegram.broadcastToAdmins(msg)
-      }
-
-      // 2. Daily Agent Report
       const start = new Date()
       start.setHours(0,0,0,0)
+      const end = new Date()
+      end.setHours(23,59,59,999)
 
-      const orders = await prisma.order.findMany({
-         where: { createdAt: { gte: start } },
-         include: { agent: true }
-      })
-      let agentSales = {}
-      for(const o of orders) {
-         const agName = o.agent ? o.agent.username : 'Noma`lum'
-         if(!agentSales[agName]) agentSales[agName] = 0
-         agentSales[agName] += o.amount
-      }
+      // 1. Fetch Today's Data
+      const [todayOrders, todayPayments, allClients] = await Promise.all([
+        prisma.order.findMany({ where: { createdAt: { gte: start, lte: end }, status: { not: 'CANCELLED' } }, include: { agent: true } }),
+        prisma.payment.findMany({ where: { date: { gte: start, lte: end }, status: 'CONFIRMED' } }),
+        prisma.client.findMany({ where: { currentDebt: { gt: 0 } }, orderBy: { currentDebt: 'desc' } })
+      ])
+
+      const totalSales = todayOrders.reduce((s, o) => s + o.amount, 0)
+      const totalPayments = todayPayments.reduce((s, p) => s + p.amount, 0)
+      const totalDebtOverall = allClients.reduce((s, c) => s + c.currentDebt, 0)
 
       const dString = `${start.getDate().toString().padStart(2, '0')}.${(start.getMonth() + 1).toString().padStart(2, '0')}.${start.getFullYear()}`
-      let msg2 = `📊 *Kunlik Agent Hisoboti*\nSana: ${dString}\n\n`
-      if (Object.keys(agentSales).length > 0) {
-          for(const [ag, sum] of Object.entries(agentSales)) {
-             msg2 += `👨‍💼 Sotuvchi: ${ag} ➜ Savdo: ${sum.toLocaleString()} $\n`
-          }
-      } else {
-          msg2 += "Bugun savdo qilinmadi."
+
+      // 2. Build Report Message
+      let msg = `📈 *KUNLIK HISOBOT* (${dString})\n\n` +
+                `💰 *Savdo (USD):* $${totalSales.toLocaleString()}\n` +
+                `💸 *To'lovlar (USD):* $${totalPayments.toLocaleString()}\n` +
+                `📉 *Jami Qarzlar:* $${totalDebtOverall.toLocaleString()}\n\n` +
+                `--- 👤 *TOP QARZDORLAR* ---\n`
+
+      allClients.slice(0, 5).forEach((c, i) => {
+         msg += `${i+1}. ${c.name}: *$${c.currentDebt.toLocaleString()}*\n`
+      })
+
+      if (todayOrders.length > 0) {
+        msg += `\n--- 👨‍💼 *AGENTLAR SAVDOSI* ---\n`
+        let agentSales = {}
+        todayOrders.forEach(o => {
+          const name = o.agent?.username || 'Noma\'lum'
+          agentSales[name] = (agentSales[name] || 0) + o.amount
+        })
+        Object.entries(agentSales).forEach(([name, sum]) => {
+          msg += `• ${name}: $${sum.toLocaleString()}\n`
+        })
       }
-      
-      await telegram.broadcastToAdmins(msg2)
-      console.log('Sent daily admin reports')
+
+      await telegram.broadcastToAdmins(msg)
+      console.log('Detailed daily report sent successfully.')
       return { msg: "Reports sent successfully" }
 
     } catch (err) {

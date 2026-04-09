@@ -204,7 +204,7 @@ export default function NewOrder() {
               />
             </div>
           </div>
-          <div className="h-cell h-cell-border h-cell-clickable" onClick={openDropdown} ref={clientBtnRef}>
+          <div className="h-cell h-cell-border h-cell-clickable" onClick={openDropdown} ref={clientBtnRef} style={{ background: selectedClient ? 'var(--bg-surface)' : 'rgba(99,102,241,0.05)', borderRadius: '12px' }}>
             <div className={`h-icon-blue ${!selectedClient ? 'animate-pulse' : ''}`}><Users size={24}/></div>
             <div className="h-text">
                <div className="h-label">MIJOZ TANLASH</div>
@@ -213,17 +213,19 @@ export default function NewOrder() {
                </div>
                {selectedClient && (
                  <div className="h-sublabel" style={{ marginTop: '4px', display: 'flex', gap: '8px', fontSize: '0.75rem' }}>
-                   <span style={{ color: 'var(--danger)' }}>Qarz: ${selectedClient.currentDebt?.toLocaleString()}</span> | 
-                   <span style={{ color: 'var(--success)' }}>Limit: ${selectedClient.creditLimit?.toLocaleString()}</span>
+                   <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>Qarz: ${selectedClient.currentDebt?.toLocaleString()}</span> 
+                   <span style={{ color: 'var(--text-muted)' }}>|</span>
+                   <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>Limit: ${selectedClient.creditLimit?.toLocaleString()}</span>
                  </div>
                )}
             </div>
           </div>
-          <div className="h-cell h-cell-clickable" onClick={() => selectedClient && setShowStatement(true)}>
+          <div className="h-cell h-cell-clickable" onClick={() => selectedClient && setShowStatement(true)} style={{ opacity: selectedClient ? 1 : 0.5 }}>
             <div className="h-icon-blue"><Wallet size={24}/></div>
             <div className="h-text">
-               <div className="h-label">BALANS KO'RISH</div>
-               <div className="h-val text-success">AKT SVERKA</div>
+               <div className="h-label">BALANS VA TARIX</div>
+               <div className="h-val text-success">OXIRGI BUYURTMALAR</div>
+               {selectedClient && <div className="h-sublabel">Sertifikat & Akt Sverkalar</div>}
             </div>
           </div>
         </div>
@@ -258,7 +260,11 @@ export default function NewOrder() {
                   <div 
                     className="pos-cat-card" 
                     onClick={() => setOpenedCategory(openedCategory === group ? null : group)}
-                    style={{ cursor: 'pointer', borderLeft: openedCategory === group ? '4px solid var(--primary)' : '1px solid var(--border-color)' }}
+                    style={{ 
+                      cursor: 'pointer', 
+                      borderLeft: openedCategory === group ? '4px solid var(--primary)' : '1px solid var(--border-color)',
+                      marginBottom: '8px'
+                    }}
                   >
                     <div className="cat-icon"><Package size={20} /></div>
                     <div className="v-stack flex-grow-1 ms-3">
@@ -275,18 +281,45 @@ export default function NewOrder() {
                       }} 
                     />
                   </div>
-                  {openedCategory === group && groupedProducts[group].map(p => (
-                    <div key={p.id} className="pos-sub-item" onClick={() => addToCart(p)}>
-                      <div className="v-stack flex-grow-1 overflow-hidden pe-3">
-                        <div className="sub-name truncate">{p.name}</div>
-                        <div className={`sub-stock ${Number(p.stock) < 5 ? 'low' : ''}`}>Ost: {p.stock} ta</div>
-                      </div>
-                      <div className="d-flex align-items-center gap-3">
-                        <div className="sub-price">${p.sellPrice}</div>
-                        <div className="btn-add-mini"><Plus size={13} /></div>
-                      </div>
+                  {openedCategory === group && (
+                    <div className="product-grid" style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr', 
+                      gap: '10px', 
+                      padding: '5px' 
+                    }}>
+                      {groupedProducts[group].map(p => {
+                        const inCart = cart.find(i => i.productId === p.id);
+                        return (
+                          <div key={p.id} className={`pos-product-item-card ${inCart ? 'active' : ''}`}>
+                            <div className="p-card-header">
+                              <div className="p-card-title truncate">{p.name}</div>
+                              <div className="p-card-code">{p.code || 'No Code'}</div>
+                            </div>
+                            <div className="p-card-body">
+                               <div className="p-card-price">${p.sellPrice}</div>
+                               <div className={`p-card-stock ${Number(p.stock) < 5 ? 'low' : ''}`}>
+                                  Omborda: {p.stock} ta
+                               </div>
+                            </div>
+                            <div className="p-card-footer">
+                              {inCart ? (
+                                <div className="qty-ctrl-large">
+                                  <button onClick={() => updateQty(p.id, -1)}><Minus size={14}/></button>
+                                  <span>{inCart.quantity}</span>
+                                  <button onClick={() => updateQty(p.id, 1)}><Plus size={14}/></button>
+                                </div>
+                              ) : (
+                                <button className="btn-add-full" onClick={() => addToCart(p)}>
+                                  <Plus size={16} /> QO'SHISH
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
                 </div>
               ))
             )}
@@ -569,6 +602,69 @@ export default function NewOrder() {
         .pos-spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ── PRODUCT CARDS ── */
+        .pos-product-item-card {
+           background: var(--bg-surface);
+           border: 1px solid var(--border-color);
+           border-radius: 12px;
+           padding: 12px;
+           display: flex;
+           flex-direction: column;
+           gap: 10px;
+           transition: all 0.2s;
+        }
+        .pos-product-item-card.active {
+           border-color: var(--primary);
+           box-shadow: 0 0 0 1px var(--primary);
+        }
+        .p-card-title { font-weight: 700; font-size: 0.85rem; color: var(--text-main); }
+        .p-card-code { font-size: 0.65rem; color: var(--text-muted); }
+        .p-card-price { font-weight: 900; font-size: 1.1rem; color: var(--primary); }
+        .p-card-stock { font-size: 0.7rem; color: var(--success); font-weight: 600; }
+        .p-card-stock.low { color: var(--danger); }
+        
+        .btn-add-full {
+           background: var(--primary);
+           color: white;
+           border: none;
+           border-radius: 8px;
+           height: 36px;
+           width: 100%;
+           font-size: 0.75rem;
+           font-weight: 700;
+           cursor: pointer;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 6px;
+           transition: opacity 0.2s;
+        }
+        .btn-add-full:hover { opacity: 0.9; }
+        
+        .qty-ctrl-large {
+           display: flex;
+           align-items: center;
+           justify-content: space-between;
+           background: var(--input-bg);
+           border-radius: 8px;
+           height: 36px;
+           padding: 0 5px;
+        }
+        .qty-ctrl-large button {
+           width: 28px;
+           height: 28px;
+           border-radius: 6px;
+           border: none;
+           background: var(--bg-surface);
+           color: var(--text-main);
+           cursor: pointer;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+        }
+        .qty-ctrl-large button:hover { background: var(--border-color); }
+        .qty-ctrl-large span { font-weight: 900; font-size: 1rem; }
+
         /* ── LAYOUT ── */
         .pos-main-layout { display: flex; flex: 1; overflow: hidden; }
         .pos-content-side { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -590,12 +686,14 @@ export default function NewOrder() {
           .pos-sidebar-side { width: 100%; border-left: none; border-top: 1px solid var(--border-color); height: auto; flex-shrink: 0; }
           .pos-sidebar-side .pos-cart-rows { max-height: 180px; }
           .pos-sidebar-side .pos-cart-panel { height: auto; }
+          .product-grid { grid-templateColumns: 1fr 1fr; }
         }
 
         @media (max-width: 600px) {
           .h-card { flex-direction: column; height: auto; border: none; background: transparent; }
           .h-cell { height: 62px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; }
           .h-cell-border { border-right: 1px solid var(--border-color); }
+          .product-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </>
