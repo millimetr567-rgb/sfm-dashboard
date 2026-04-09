@@ -355,25 +355,46 @@ export default function NewOrder() {
             </div>
 
             {/* Summary + Button */}
-            <div className="pos-summary">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                  <div className="sum-label">JAMI SONI: {totalItems} TA</div>
-                  <div className="sum-usd">${totalUSD.toLocaleString()}</div>
+            <div className="pos-summary" style={{ 
+              padding: '16px', 
+              borderTop: '1px solid var(--border-color)',
+              background: 'rgba(255,255,255,0.02)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.65rem', color: '#666', fontWeight: 800, letterSpacing: '0.5px' }}>JAMI SUMMA</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>
+                    ${totalUSD.toLocaleString()}
+                  </span>
                 </div>
-                <div className="text-end">
-                  <div className="sum-label">JAMI SUMMA</div>
-                  <div className="sum-uzs">{totalUZS.toLocaleString()} SO'M</div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.65rem', color: '#666', fontWeight: 800, letterSpacing: '0.5px' }}>{totalItems} TA MAHSULOT</span>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#888' }}>
+                    {totalUZS.toLocaleString()} SO'M
+                  </div>
                 </div>
               </div>
+              
               <button
                 className="btn-submit"
                 onClick={submitOrder}
                 disabled={loading || cart.length === 0 || !selectedClient}
               >
-                <Send size={20} />
-                {loading ? 'YUKLANMOQDA...' : "SAQLASH VA JO'NATISH"}
+                {loading ? (
+                  <div className="pos-spinner" style={{ width: '20px', height: '20px' }}></div>
+                ) : (
+                  <>
+                    <Send size={20} />
+                    <span>SAQLASH VA JO'NATISH</span>
+                  </>
+                )}
               </button>
+              
+              {!selectedClient && cart.length > 0 && (
+                <div style={{ color: 'var(--danger)', fontSize: '0.7rem', textAlign: 'center', marginTop: '8px', fontWeight: 600 }}>
+                  * Buyurtma berish uchun mijozni tanlang
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -417,15 +438,23 @@ export default function NewOrder() {
               <div
                 key={c.id}
                 className="dd-item"
-                onMouseDown={e => e.preventDefault()}   /* prevent blur/close before click */
+                onMouseDown={e => e.preventDefault()}
                 onClick={() => { setSelectedClient(c); setShowClientDropdown(false); }}
               >
-                <div className="flex-grow-1 overflow-hidden pe-3">
-                  <div className="dd-name truncate">{c.name}</div>
-                  <div className="dd-phone">{c.phone || 'Tel yo\'q'} | Limiti: ${c.creditLimit?.toLocaleString()}</div>
-                </div>
-                <div className={(c.currentDebt || 0) > 0 ? 'dd-debt danger' : 'dd-debt success'}>
-                  ${Number(c.currentDebt || 0).toLocaleString()}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {c.name}
+                    </span>
+                    <span style={{ fontWeight: 900, fontSize: '0.95rem', color: (c.currentDebt || 0) > 0 ? '#ff4d4d' : '#00e676' }}>
+                      ${Number(c.currentDebt || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '0.8rem' }}>
+                    <span>{c.phone || 'Tel yo\'q'}</span>
+                    <span style={{ color: '#555' }}>|</span>
+                    <span>Limiti: ${Number(c.creditLimit || 0).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -461,38 +490,59 @@ export default function NewOrder() {
                 <div className="tile-val" style={{ fontSize: '1.1rem' }}>≈ {((selectedClient?.currentDebt || 0) * exchangeRate).toLocaleString()}</div>
               </div>
             </div>
-            <div className="modal-timeline scroll-styled" style={{ flex: 1 }}>
-              <div className="table-container" style={{ border: 'none', background: 'transparent' }}>
-                <table className="custom-table" style={{ fontSize: '0.8rem' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ padding: '8px 12px' }}>Sana</th>
-                      <th style={{ padding: '8px 12px' }}>Amaliyot</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Summa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      ...statementData.orders.map(o => ({ ...o, _type: 'order', date: o.createdAt })),
-                      ...statementData.payments.map(p => ({ ...p, _type: 'payment', date: p.date || p.createdAt })),
-                    ]
-                    .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    .map((item, idx) => (
-                      <tr key={idx}>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{new Date(item.date).toLocaleDateString()}</td>
-                        <td style={{ padding: '8px 12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {item._type === 'order' ? <Package size={12} color="var(--warning)"/> : <Wallet size={12} color="var(--success)"/>}
-                            <span style={{ fontWeight: 500 }}>{item._type === 'order' ? 'Savdo' : 'To\'lov'}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 'bold', color: item._type === 'order' ? 'var(--danger)' : 'var(--success)' }}>
-                          {item._type === 'order' ? '+' : '-'}${Number(item.amount).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="modal-timeline scroll-styled" style={{ flex: 1, padding: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[
+                  ...statementData.orders.map(o => ({ ...o, _type: 'order', date: o.createdAt })),
+                  ...statementData.payments.map(p => ({ ...p, _type: 'payment', date: p.date || p.createdAt })),
+                ]
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 30) // Show last 30 activities
+                .map((item, idx) => (
+                  <div key={idx} style={{ 
+                    background: 'rgba(255,255,255,0.03)', 
+                    borderRadius: '12px', 
+                    padding: '12px',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ 
+                        width: '36px', 
+                        height: '36px', 
+                        borderRadius: '10px', 
+                        background: item._type === 'order' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {item._type === 'order' ? <Package size={18} color="#ff9800"/> : <Wallet size={18} color="#4caf50"/>}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                          {item._type === 'order' ? `Buyurtma #${item.orderNumber || item.id.substring(0,5)}` : 'To\'lov qabul qilindi'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                          {new Date(item.date).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ 
+                        fontWeight: 800, 
+                        fontSize: '1rem', 
+                        color: item._type === 'order' ? '#ff4d4d' : '#00e676' 
+                      }}>
+                        {item._type === 'order' ? '+' : '-'}${Number(item.amount).toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#555' }}>
+                        {item.paymentMethod || item.status || ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '12px' }}>
@@ -583,6 +633,72 @@ export default function NewOrder() {
         .pos-product-card:hover { border-color: var(--primary); }
         .p-name { font-weight: 800; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .p-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+        
+        /* ── DROPDOWN ── */
+        .dd-list { max-height: 400px; overflow-y: auto; padding: 6px; }
+        .dd-item {
+          background: #1A1A1A;
+          border-radius: 12px;
+          margin-bottom: 8px;
+          padding: 12px 14px;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          height: 68px;
+          border: 1px solid rgba(255,255,255,0.03);
+        }
+        .dd-item:hover {
+          background: #222;
+          transform: translateY(-1px);
+          border-color: var(--primary);
+        }
+        .dd-search-row {
+          padding: 14px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          background: #111;
+        }
+        .dd-search-input {
+          background: transparent;
+          border: none;
+          color: white;
+          width: 100%;
+          outline: none;
+          font-size: 0.9rem;
+        }
+        .dd-empty { padding: 30px; text-align: center; color: #555; font-size: 0.8rem; }
+
+        .btn-submit {
+          background: var(--primary);
+          color: white;
+          border: none;
+          border-radius: 14px;
+          height: 56px;
+          width: 100%;
+          font-weight: 800;
+          font-size: 1.05rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          cursor: pointer;
+          box-shadow: 0 8px 20px rgba(99,102,241,0.3);
+          transition: all 0.2s;
+        }
+        .btn-submit:disabled {
+          background: #222;
+          color: #555;
+          box-shadow: none;
+          cursor: not-allowed;
+        }
+        .btn-submit:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(99,102,241,0.4);
+        }
+
         .p-stock { font-size: 0.68rem; font-weight: 900; color: var(--success); margin-top: 3px; }
         .p-stock.low { color: var(--danger); }
         .p-price { font-weight: 900; font-size: 1.05rem; color: var(--primary); flex-shrink: 0; }

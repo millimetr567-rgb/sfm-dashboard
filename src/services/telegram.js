@@ -57,7 +57,7 @@ class TelegramService {
         return [...new Set(ids.map(id => String(id).trim()))];
     } catch (e) {
         console.error("[Telegram] getChatIds Error:", e.message);
-        return ['-1005180118070'];
+        return ['-5180118070'];
     }
   }
 
