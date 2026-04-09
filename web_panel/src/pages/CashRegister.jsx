@@ -247,24 +247,61 @@ export default function CashRegister() {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Jami (UZS):</span>
-                  <span style={{ fontWeight: 'bold' }}>{sums.uzs.toLocaleString()} UZS</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', color: 'var(--primary)', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
-                  <span style={{ fontWeight: 'bold' }}>JAMI ($):</span>
-                  <span style={{ fontWeight: '800' }}>${sums.usd.toLocaleString()}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Mijozning joriy qarzi:</span>
+                  <span style={{ fontWeight: 800, color: (selectedClient?.currentDebt || 0) > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                    ${Number(selectedClient?.currentDebt || 0).toLocaleString()}
+                  </span>
                 </div>
 
                 {orderId && (
-                  <div style={{ marginTop: '10px', padding: '15px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--danger)' }}>
-                      <span>Qarzga yozildi:</span>
-                      <span style={{ fontWeight: 'bold' }}>
-                        ${Math.max(0, (pendingOrders.find(o => o.id === orderId)?.amount || 0) - sums.usd).toFixed(2)}
-                      </span>
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Tanlangan buyurtma (#{(pendingOrders.find(o => o.id === orderId)?.orderNumber || orderId.substring(0,6))}):</span>
+                    <span style={{ fontWeight: 800, color: 'var(--warning)' }}>
+                      ${Number(pendingOrders.find(o => o.id === orderId)?.amount || 0).toLocaleString()}
+                    </span>
                   </div>
                 )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', color: 'var(--primary)', borderTop: '2px solid var(--border-color)', paddingTop: '15px' }}>
+                  <span style={{ fontWeight: 'bold' }}>JAMI KIRIM ($):</span>
+                  <span style={{ fontWeight: '900' }}>${sums.usd.toLocaleString()}</span>
+                </div>
+
+                <div style={{ 
+                  marginTop: '10px', 
+                  padding: '15px', 
+                  background: 'rgba(99,102,241,0.05)', 
+                  borderRadius: '12px', 
+                  border: '1px solid rgba(99,102,241,0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  {orderId && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.85rem' }}>Qaytim (So'mda):</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--success)' }}>
+                          {sums.uzs > (pendingOrders.find(o => o.id === orderId)?.amount * (p(kurs) || 1)) 
+                            ? (sums.uzs - (pendingOrders.find(o => o.id === orderId)?.amount * (p(kurs) || 1))).toLocaleString() 
+                            : '0'} UZS
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.85rem' }}>Status:</span>
+                        <span style={{ fontWeight: 'bold', color: sums.usd >= (pendingOrders.find(o => o.id === orderId)?.amount || 0) ? 'var(--success)' : 'var(--warning)' }}>
+                          {sums.usd >= (pendingOrders.find(o => o.id === orderId)?.amount || 0) ? 'TO\'LIQ YOPILADI' : 'QISMAN TO\'LOV'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>YANGI BALANS:</span>
+                    <span style={{ fontWeight: '900', color: (selectedClient?.currentDebt - sums.usd) > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                      ${Math.max(0, (selectedClient?.currentDebt || 0) - sums.usd).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 

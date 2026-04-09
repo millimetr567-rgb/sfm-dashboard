@@ -130,35 +130,38 @@ export default function OrderHistory() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {filtered.map(o => (
           <div key={o.id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
-            <div 
-              style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-              onClick={() => setExpandedOrderId(expandedOrderId === o.id ? null : o.id)}
-            >
-              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                {expandedOrderId === o.id ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
-                <div>
-                  <div style={{ fontWeight: 'bold' }}>#{o.orderNumber || o.id.substring(0,8)} | {o.client?.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleString()} | Agent: {o.agent?.username}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>${o.amount?.toLocaleString()}</div>
-                  <div className={`badge ${o.status === 'CONFIRMED' || o.status === 'APPROVED' ? 'badge-success' : o.status === 'CANCELLED' ? 'badge-danger' : 'badge-warning'}`}>
-                    {STATUS_UZ[o.status] || o.status}
+            <div className="order-card-header" style={{ padding: '15px 20px', cursor: 'pointer' }} onClick={() => setExpandedOrderId(expandedOrderId === o.id ? null : o.id)}>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                  <div style={{ flexShrink: 0 }}>{expandedOrderId === o.id ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}</div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      #{o.orderNumber || o.id.substring(0,8)} | {o.client?.name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleString()}</div>
                   </div>
                 </div>
-                {isAdmin && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={(e) => { e.stopPropagation(); setEditOrder(o); }} className="btn-icon" style={{ color: 'var(--primary)' }}><Edit2 size={16}/></button>
-                    {(o.status === 'PENDING_PAYMENT' || o.status === 'WAITING_APPROVAL') && (
-                       <button onClick={(e) => approveOrder(e, o.id)} className="btn-icon" style={{ color: 'var(--success)' }}><CheckCircle size={18}/></button>
-                    )}
-                    <button onClick={(e) => deleteOrder(e, o.id)} className="btn-icon" style={{ color: 'var(--danger)' }}><Trash2 size={16}/></button>
+                
+                <div className="order-card-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem' }}>${o.amount?.toLocaleString()}</div>
+                    <div className={`badge ${o.status === 'CONFIRMED' || o.status === 'APPROVED' ? 'badge-success' : o.status === 'CANCELLED' ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
+                      {STATUS_UZ[o.status] || o.status}
+                    </div>
                   </div>
-                )}
+                  
+                  {isAdmin && (
+                    <div style={{ display: 'flex', gap: '6px', borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: '10px' }}>
+                      {(o.status === 'PENDING_PAYMENT' || o.status === 'WAITING_APPROVAL') && (
+                         <button onClick={(e) => approveOrder(e, o.id)} className="btn-icon" style={{ color: 'var(--success)', padding: '8px' }} title="Tasdiqlash">
+                           <CheckCircle size={20}/>
+                         </button>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); setEditOrder(o); }} className="btn-icon" style={{ color: 'var(--primary)', padding: '8px' }}><Edit2 size={18}/></button>
+                      <button onClick={(e) => deleteOrder(e, o.id)} className="btn-icon" style={{ color: 'var(--danger)', padding: '8px' }}><Trash2 size={18}/></button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
             {expandedOrderId === o.id && (
               <div className="animate-fade-in" style={{ padding: '20px', background: 'rgba(0,0,0,0.1)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -192,6 +195,26 @@ export default function OrderHistory() {
         ))}
         {filtered.length === 0 && <div className="card" style={{ textAlign: 'center' }}>{t('loading')}</div>}
       </div>
+      <style>{`
+        .order-card-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+        }
+        @media (max-width: 600px) {
+           .order-card-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 12px;
+           }
+           .order-card-actions {
+              width: 100%;
+              justify-content: space-between;
+              border-top: 1px solid rgba(255,255,255,0.05);
+              padding-top: 10px;
+           }
+        }
+      `}</style>
     </div>
   );
 }
