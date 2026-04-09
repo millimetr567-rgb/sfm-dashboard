@@ -195,7 +195,7 @@ export default function NewOrder() {
           <div className="h-cell h-cell-border h-cell-clickable" onClick={() => document.getElementById('dateRef').showPicker()}>
             <Calendar size={17} className="h-icon-blue" />
             <div className="h-text">
-              <span className="h-label">O'PERASIYA SANASI</span>
+              <span className="h-label">OPERATSIYA SANASI</span>
               <input
                 type="date" id="dateRef"
                 value={orderDate}
@@ -533,9 +533,9 @@ export default function NewOrder() {
                       <div style={{ 
                         fontWeight: 800, 
                         fontSize: '1rem', 
-                        color: item._type === 'order' ? '#ff4d4d' : '#00e676' 
+                        color: item.status === 'PAID' || item._type === 'payment' ? '#00e676' : '#ff4d4d' 
                       }}>
-                        {item._type === 'order' ? '+' : '-'}${Number(item.amount).toLocaleString()}
+                        {item._type === 'order' ? (item.status === 'PAID' ? '• ' : '+') : '-'}${Number(item.amount).toLocaleString()}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#555' }}>
                         {item.paymentMethod || item.status || ''}
@@ -798,11 +798,30 @@ export default function NewOrder() {
         }
 
         @media (max-width: 768px) {
-          .pos-main-layout { flex-direction: column; }
-          .pos-sidebar-side { width: 100%; border-left: none; border-top: 1px solid var(--border-color); height: auto; flex-shrink: 0; }
-          .pos-sidebar-side .pos-cart-rows { max-height: 180px; }
+          .pos-main-layout { flex-direction: column; height: auto; overflow: visible; }
+          .pos-sidebar-side { 
+            width: 100%; 
+            border-left: none; 
+            border-top: 1px solid var(--border-color);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            background: var(--bg-surface);
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+          }
           .pos-sidebar-side .pos-cart-panel { height: auto; }
-          .product-grid { grid-templateColumns: 1fr 1fr; }
+          .pos-sidebar-side .pos-cart-rows { 
+            max-height: 160px; 
+            background: rgba(0,0,0,0.2);
+          }
+          .pos-sidebar-side .pos-cart-rows:empty { display: none; }
+          .pos-summary { 
+            padding: 12px 16px 24px !important; 
+          }
+          .pos-feed { overflow: visible; height: auto; }
+          .pos-root { height: auto; overflow: auto; }
+          .pos-content-side { height: auto; overflow: visible; }
+          .product-grid { grid-template-columns: 1fr 1fr; }
         }
 
         @media (max-width: 600px) {

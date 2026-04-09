@@ -307,6 +307,7 @@ class TelegramService {
   async sendOrderNotification(order) {
     if (!this.fastify || !this.bot) return;
     try {
+        console.log(`[Telegram] Sending notification for Order #${order.id.substring(0,8)}`);
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         
@@ -315,13 +316,14 @@ class TelegramService {
             if (order.client?.telegramGroupId) chatIds.push(order.client.telegramGroupId);
         }
 
+        console.log(`[Telegram] Target Chat IDs: ${chatIds.join(', ')}`);
         if (chatIds.length === 0) return;
 
         const pdf = await this.generateOrderPDF(order);
         let text = `📦 *YANGI BUYURTMA YARATILDI*\n\n` +
                    `🆔 Raqam: \`#${order.orderNumber || order.id.substring(0,8)}\`\n` +
-                   `👤 Mijoz: *${this.esc(order.client.name)}*\n` +
-                   `💵 Jami: *${order.amount.toFixed(2)} $*\n` +
+                   `👤 Mijoz: *${this.esc(order.client?.name || 'Noma\'lum')}*\n` +
+                   `💵 Jami: *${order.amount?.toFixed(2) || '0.00'} $*\n` +
                    `👤 Agent: ${this.esc(order.agent?.username || '—')}\n` +
                    `📊 Holat: *TASDIQ KUTILMOQDA*`;
 
