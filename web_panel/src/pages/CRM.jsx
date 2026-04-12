@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_URL } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/LanguageContext';
-import { Search, Plus, Trash2, ChevronDown, ChevronUp, Download, UserCircle, Package } from 'lucide-react';
+import { Search, Plus, Trash2, ChevronDown, ChevronUp, Download, UserCircle, Package, Wallet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function CRM() {

@@ -207,10 +207,12 @@ class TelegramService {
         for (const tid of chatIds) {
             try {
                 if (pdf) {
-                    await this.bot.sendDocument(tid, pdf, { 
-                        caption: `📄 To'lov cheki (Tasdiqlash uchun)`,
-                        filename: `Payment_${payment.id.substring(0,6)}.pdf` 
-                    });
+                    try {
+                        await this.bot.sendDocument(tid, pdf, { 
+                            caption: `📄 To'lov cheki (Tasdiqlash uchun)`,
+                            filename: `Payment_${payment.id.substring(0,6)}.pdf` 
+                        });
+                    } catch(pe) { console.error(`[Telegram] PDF send error to ${tid}:`, pe.message); }
                 }
                 await this.bot.sendMessage(tid, msg, opts);
             } catch (e) { console.error(`[Telegram] Send Error to ${tid}:`, e.message); }
@@ -394,10 +396,14 @@ class TelegramService {
 
         for (const tid of chatIds) {
           try {
-            await this.bot.sendDocument(tid, pdf, { 
-              caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
-              filename: `Order_${order.id.substring(0,6)}.pdf` 
-            });
+            if (pdf) {
+                try {
+                    await this.bot.sendDocument(tid, pdf, { 
+                      caption: `📄 Buyurtma feli: #${order.orderNumber || order.id.substring(0,8)}`,
+                      filename: `Order_${order.id.substring(0,6)}.pdf` 
+                    });
+                } catch(pe) { console.error(`[Telegram] PDF send error to ${tid}:`, pe.message); }
+            }
             await this.bot.sendMessage(tid, text, opts);
           } catch(e) { console.error(`[Telegram] Order Notify Error to ${tid}:`, e.message); }
         }
