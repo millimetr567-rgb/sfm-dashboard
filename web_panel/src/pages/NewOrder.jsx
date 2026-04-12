@@ -24,6 +24,18 @@ export default function NewOrder() {
   const [dropdownPos, setDropdownPos]               = useState({ top: 0, left: 0, width: 0 });
   const [clientSearch, setClientSearch]             = useState('');
 
+  // Checkout modal
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [cash, setCash] = useState('');
+  const [terminal, setTerminal] = useState(''); 
+  const [click, setClick] = useState('');
+  const [bank, setBank] = useState('');
+  const [usd, setUsd] = useState('');
+  const [convert, setConvert] = useState(true);
+  const [qaytarish, setQaytarish] = useState('');
+  const [bankChegirma, setBankChegirma] = useState('');
+  const [notes, setNotes] = useState('');
+
   // Statement modal
   const [showStatement, setShowStatement] = useState(false);
   const [statementData, setStatementData] = useState({ orders: [], payments: [] });
@@ -132,24 +144,63 @@ export default function NewOrder() {
   const totalUZS   = totalUSD * exchangeRate;
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
 
-  /* ─── SUBMIT ─────────────────────────────────────────────── */
-  const submitOrder = async () => {
+  // Helper for parsing currency strings gracefully
+  const p = (v) => parseFloat(v?.toString().replaceAll(",", ".") || 0) || 0;
+
+  const handleCheckoutClick = () => {
     if (!selectedClient) return alert("Iltimos, mijozni tanlang!");
     if (cart.length === 0) return alert("Savatcha bo'sh!");
+    setShowCheckoutModal(true);
+  };
+
+  const submitOrder = async () => {
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/orders`, {
+      // 1. Create the order
+      const res = await axios.post(`${API_URL}/orders`, {
         clientId: selectedClient.id,
         due_date: orderDate,
         items: cart.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
       });
+      
+      const newOrder = res.data;
+
+      // 2. Determine if payment was typed
+      const totalPaidUzs = p(cash) + p(terminal) + p(click) + p(bank);
+      const totalPaidUsd = p(usd);
+      
+      if (totalPaidUzs > 0 || totalPaidUsd > 0) {
+         let finalUzs = totalPaidUzs - p(qaytarish) - p(bankChegirma);
+         if (convert) { finalUzs += totalPaidUsd * p(exchangeRate); }
+         const finalUsd = Math.round((finalUzs / p(exchangeRate)) * 100) / 100;
+         
+         await axios.post(`${API_URL}/payments`, {
+            clientId: selectedClient.id,
+            orderId: newOrder.id,
+            amount: finalUsd,
+            notes,
+            paymentMethod: 'Kalkulyator (Mix)',
+            cashAmount: p(cash),
+            terminalAmount: p(terminal),
+            clickAmount: p(click),
+            bankAmount: p(bank),
+            usdAmount: p(usd),
+            changeAmount: p(qaytarish),
+            discountAmount: p(bankChegirma),
+            isConverted: convert,
+            exchangeRate: p(exchangeRate)
+         });
+      }
+
       alert("Buyurtma muvaffaqiyatli saqlandi!");
       setCart([]);
       setSelectedClient(null);
+      setShowCheckoutModal(false);
+      setCash(''); setTerminal(''); setClick(''); setBank(''); setUsd(''); setQaytarish(''); setBankChegirma(''); setNotes('');
       await fetchData();
     } catch (err) {
       console.error('Submit order error:', err);
-      alert("Xato: " + (err.response?.data?.error || "Buyurtmani saqlashda xatolik yuz berdi. Iltimos qaytadan urining."));
+      alert("Xato: " + (err.response?.data?.error || "Buyurtmani saqlashda xatolik yuz berdi."));
     } finally {
       setLoading(false);
     }
@@ -377,7 +428,7 @@ export default function NewOrder() {
               
               <button
                 className="btn-submit"
-                onClick={submitOrder}
+                onClick={handleCheckoutClick}
                 disabled={loading || cart.length === 0 || !selectedClient}
               >
                 {loading ? (
@@ -463,6 +514,53 @@ export default function NewOrder() {
         document.body
       )}
 
+      {/* ══ CHECKOUT MODAL ══ */}
+      {showCheckoutModal && createPortal(
+        <div className="modal-backdrop" onClick={() => setShowCheckoutModal(false)}>
+          <div className="modal-box" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+               <div style={{ flex: 1 }}>
+                  <div className="modal-title">BUYURTMANI TO'LASH YOKI SAQLASH</div>
+                  <div className="modal-sub">Jami: ${totalUSD.toLocaleString()}</div>
+               </div>
+               <button className="modal-close" onClick={() => setShowCheckoutModal(false)}><X size={22} /></button>
+            </div>
+            
+            <div className="scroll-styled" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '20px' }}>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div className="form-group"><label className="form-label">NAQD (SO'M)</label><input type="number" className="form-control" value={cash} onChange={e => setCash(e.target.value)} placeholder="0" /></div>
+                  <div className="form-group"><label className="form-label">TERMINAL</label><input type="number" className="form-control" value={terminal} onChange={e => setTerminal(e.target.value)} placeholder="0" /></div>
+                  <div className="form-group"><label className="form-label">CLICK / PAYME</label><input type="number" className="form-control" value={click} onChange={e => setClick(e.target.value)} placeholder="0" /></div>
+                  <div className="form-group"><label className="form-label">PUL KO'CHIRISH (BANK)</label><input type="number" className="form-control" value={bank} onChange={e => setBank(e.target.value)} placeholder="0" /></div>
+                  <div className="form-group"><label className="form-label">VALYUTA ($)</label><input type="number" className="form-control" value={usd} onChange={e => setUsd(e.target.value)} placeholder="0" /></div>
+                  <div className="form-group">
+                      <label className="form-label">VALYUTA KURSI (1$)</label>
+                      <input type="number" className="form-control" value={exchangeRate} readOnly style={{ background: 'var(--bg-color)', color: 'var(--primary)' }} />
+                  </div>
+                  <div className="form-group"><label className="form-label">CHEGIRMA (BANK)</label><input type="number" className="form-control" value={bankChegirma} onChange={e => setBankChegirma(e.target.value)} placeholder="0" /></div>
+                  <div className="form-group"><label className="form-label">QAYTARISH (NAQD)</label><input type="number" className="form-control" value={qaytarish} onChange={e => setQaytarish(e.target.value)} placeholder="0" /></div>
+               </div>
+               <div className="form-group" style={{ marginTop: '15px' }}>
+                  <label className="form-label">IZOH (IXTIYORIY)</label>
+                  <textarea className="form-control" value={notes} onChange={e => setNotes(e.target.value)} placeholder="To'lov haqida eslatma..."></textarea>
+               </div>
+               
+               <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '15px', borderRadius: '12px', marginTop: '20px' }}>
+                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>*Agar mijoz qarzga olib ketayotgan bo'lsa, qatorlarni bo'sh qoldiring va saqlashni bosing.</p>
+               </div>
+            </div>
+
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '15px', display: 'flex', gap: '10px' }}>
+               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowCheckoutModal(false)}>ORTGA</button>
+               <button className="btn btn-primary" style={{ flex: 2, display: 'flex', justifyContent: 'center', gap: '8px' }} onClick={submitOrder} disabled={loading}>
+                 {loading ? 'YUKLANMOQDA...' : <><Send size={18}/> SAQLASH VA JO'NATISH</>}
+               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
 
       {/* ══ STATEMENT MODAL ═════════════════════════════════ */}
       {showStatement && (
@@ -541,6 +639,19 @@ export default function NewOrder() {
                         {item.paymentMethod || item.status || ''}
                       </div>
                     </div>
+                  </div>
+                  {item._type === 'order' && (
+                    <div style={{ padding: '0 12px 12px 12px', marginTop: '-6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px' }}>
+                        <strong>Mahsulotlar:</strong>
+                        <ul style={{ margin: '4px 0 0 15px', padding: 0 }}>
+                          {item.items?.map(it => (
+                            <li key={it.id}>{it.product?.name || 'Mahsulot'} x {it.quantity}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                   </div>
                 ))}
               </div>

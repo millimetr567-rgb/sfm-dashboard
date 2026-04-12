@@ -94,4 +94,55 @@ module.exports = async function (fastify, opts) {
       timestamp: new Date()
     }
   })
+
+  // 4. Dashboard Stats
+  fastify.get('/stats', async (request, reply) => {
+    // totalSales
+    const completedOrders = await fastify.prisma.order.findMany({
+        where: { status: { in: ['CONFIRMED', 'PAID'] } }
+    })
+    const totalSales = completedOrders.reduce((acc, o) => acc + o.amount, 0)
+
+    // activeClients
+    const activeClients = await fastify.prisma.client.count({
+        where: { status: 'ACTIVE' }
+    })
+
+    // unapproved orders / pending orders count
+    const pendingOrdersCount = await fastify.prisma.order.count({
+        where: { status: { in: ['WAITING_APPROVAL', 'PENDING_APPROVAL', 'PENDING_PAYMENT'] } }
+    })
+
+    // low stock products (stock < 5)
+    const lowStockProducts = await fastify.prisma.product.findMany({
+        where: { stock: { lt: 5 } },
+        select: { id: true, name: true, stock: true }
+    })
+
+    // Recent Sales for Chart (last 30 days roughly, we mock it by grouping by date simply)
+    const recent = []
+    const now = new Date()
+    for(let i = 14; i >= 0; i--) {
+        const d = new Date(now)
+        d.setDate(d.getDate() - i)
+        const dateStr = `${d.getDate()}/${d.getMonth()+1}`
+        
+        // Sum up orders for this day
+        const daySum = completedOrders.filter(o => 
+            new Date(o.createdAt).getDate() === d.getDate() && 
+            new Date(o.createdAt).getMonth() === d.getMonth()
+        ).reduce((acc, o) => acc + o.amount, 0)
+        
+        recent.push({ date: dateStr, sales: daySum })
+    }
+
+    return {
+      totalSales,
+      activeClients,
+      orderCount: pendingOrdersCount,
+      lowStock: lowStockProducts.length,
+      lowStockItems: lowStockProducts,
+      recentSales: recent
+    }
+  })
 }

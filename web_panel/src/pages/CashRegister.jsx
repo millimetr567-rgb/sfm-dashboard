@@ -13,6 +13,8 @@ export default function CashRegister() {
   // Data lists
   const [clients, setClients] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
+  const [allPendingPayments, setAllPendingPayments] = useState([]);
+  const isAdmin = user?.role === 'ADMIN';
   
   // Form State
   const [clientId, setClientId] = useState('');
@@ -40,13 +42,15 @@ export default function CashRegister() {
 
   const fetchData = async () => {
     try {
-      const [cRes, oRes, sRes] = await Promise.all([
+      const [cRes, oRes, sRes, pRes] = await Promise.all([
         axios.get(`${API_URL}/clients`),
         axios.get(`${API_URL}/orders`),
-        axios.get(`${API_URL}/settings/public`)
+        axios.get(`${API_URL}/settings/public`),
+        axios.get(`${API_URL}/payments`)
       ]);
       setClients(cRes.data);
       setPendingOrders(oRes.data.filter(o => o.status === 'PENDING_PAYMENT' || o.status === 'WAITING_APPROVAL'));
+      setAllPendingPayments(pRes.data.filter(p => p.status === 'WAITING_APPROVAL'));
       if (sRes.data?.exchangeRate) setKurs(sRes.data.exchangeRate.toString());
     } catch (e) {
       console.error("Data fetch error", e);
@@ -159,8 +163,53 @@ export default function CashRegister() {
   const labelStyle = { display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' };
   const inputGroupStyle = { marginBottom: '15px' };
 
+  const handleApprovePayment = async (id, toApprove) => {
+    if (!window.confirm(toApprove ? "Ushbu to'lovni tasdiqlaysizmi?" : "Ushbu to'lovni rad etasizmi?")) return;
+    try {
+        await axios.post(`${API_URL}/payments/${id}/${toApprove ? 'approve' : 'reject'}`);
+        alert(toApprove ? "To'lov tasdiqlandi" : "To'lov rad etildi");
+        fetchData();
+    } catch (e) {
+        alert("Xato: " + (e.response?.data?.error || e.message));
+    }
+  };
+
   return (
-    <div className="pos-root animate-fade-in">
+    <div className="pos-root animate-fade-in scroll-styled" style={{ overflowY: 'auto' }}>
+      
+      {/* ADMIN APPROVAL SECTION */}
+      {isAdmin && allPendingPayments.length > 0 && (
+        <div style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.05)', borderBottom: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          <h3 style={{ color: 'var(--danger)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Wallet size={20} /> TASDIQ KUTILAYOTGAN TO'LOVLAR ({allPendingPayments.length})
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
+            {allPendingPayments.map(p => (
+              <div key={p.id} className="card glass-panel" style={{ padding: '15px', border: '1px solid var(--warning)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ fontWeight: 'bold' }}>{p.client?.name || 'Noma\'lum'}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{new Date(p.createdAt || p.date).toLocaleDateString()}</span>
+                </div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '5px' }}>
+                  ${p.amount?.toLocaleString()}
+                </div>
+                {p.paymentMethod && <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Usul: {p.paymentMethod}</div>}
+                {p.notes && <div style={{ fontSize: '0.8rem', color: 'var(--warning)', marginTop: '5px' }}>Izoh: {p.notes}</div>}
+                
+                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                  <button onClick={() => handleApprovePayment(p.id, true)} className="btn btn-primary" style={{ flex: 1, background: 'var(--success)' }}>
+                    <CheckCircle size={16}/> Tasdiqlash
+                  </button>
+                  <button onClick={() => handleApprovePayment(p.id, false)} className="btn btn-secondary" style={{ flex: 1, color: 'var(--danger)' }}>
+                    <X size={16}/> Rad etish
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="pos-main-layout">
         <div className="pos-content-side scroll-styled" style={{ padding: '20px' }}>
           {/* Client Selection & Kurs */}

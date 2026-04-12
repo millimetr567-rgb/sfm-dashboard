@@ -11,9 +11,11 @@ export default function Dashboard() {
     activeClients: 0, 
     orderCount: 0, 
     lowStock: 0, 
+    lowStockItems: [],
     recentSales: [] 
   });
   const [loading, setLoading] = useState(true);
+  const [activeModal, setActiveModal] = useState(null); // 'orders' | 'stock' | null
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -30,10 +32,10 @@ export default function Dashboard() {
   }, []);
 
   const cards = [
-    { title: t('total_sales'), value: `$${stats.totalSales?.toLocaleString()}`, icon: <DollarSign color="var(--success)"/>, bg: 'rgba(34, 197, 94, 0.1)' },
-    { title: t('active_clients'), value: stats.activeClients, icon: <Users color="var(--primary)"/>, bg: 'rgba(99, 102, 241, 0.1)' },
-    { title: t('order_count'), value: stats.orderCount, icon: <ShoppingBag color="var(--secondary)"/>, bg: 'rgba(236, 72, 153, 0.1)' },
-    { title: "Kam qolgan tovar", value: stats.lowStock, icon: <AlertTriangle color="var(--danger)"/>, bg: 'rgba(239, 68, 68, 0.1)' },
+    { id: 'sales', title: t('total_sales'), value: `$${stats.totalSales?.toLocaleString()}`, icon: <DollarSign color="var(--success)"/>, bg: 'rgba(34, 197, 94, 0.1)', onClick: null },
+    { id: 'clients', title: t('active_clients'), value: stats.activeClients, icon: <Users color="var(--primary)"/>, bg: 'rgba(99, 102, 241, 0.1)', onClick: null },
+    { id: 'orders', title: "Kutilayotgan Buyurtmalar", value: stats.orderCount, icon: <ShoppingBag color="var(--secondary)"/>, bg: 'rgba(236, 72, 153, 0.1)', onClick: () => setActiveModal('orders') },
+    { id: 'stock', title: "Kam qolgan tovar", value: stats.lowStock, icon: <AlertTriangle color="var(--danger)"/>, bg: 'rgba(239, 68, 68, 0.1)', onClick: () => setActiveModal('stock') },
   ];
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>{t('loading')}</div>;
@@ -44,7 +46,14 @@ export default function Dashboard() {
       
       <div className="responsive-grid">
         {cards.map((card, i) => (
-          <div key={i} className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '25px' }}>
+          <div 
+            key={i} 
+            className="card glass-panel" 
+            style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '25px', cursor: card.onClick ? 'pointer' : 'default', transition: 'all 0.2s', border: '1px solid transparent' }}
+            onClick={card.onClick}
+            onMouseOver={e => { if(card.onClick) e.currentTarget.style.borderColor = 'var(--primary)' }}
+            onMouseOut={e => { if(card.onClick) e.currentTarget.style.borderColor = 'transparent' }}
+          >
             <div style={{ padding: '15px', borderRadius: '16px', background: card.bg }}>
               {card.icon}
             </div>
@@ -90,6 +99,47 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {activeModal === 'stock' && (
+        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between' }}>
+              <h3 style={{ color: 'var(--danger)' }}>Kam qolgan mahsulotlar</h3>
+              <button onClick={() => setActiveModal(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>✖</button>
+            </div>
+            <div style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
+              {stats.lowStockItems?.length > 0 ? stats.lowStockItems.map(item => (
+                <div key={item.id} style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', marginBottom: '8px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{item.name}</span>
+                  <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>{item.stock} ta</span>
+                </div>
+              )) : (
+                <div style={{ color: 'var(--text-muted)' }}>Barcha mahsulotlar yetarli miqdorda.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'orders' && (
+        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between' }}>
+              <h3 style={{ color: 'var(--warning)' }}>Tasdiqlanmagan Buyurtmalar</h3>
+              <button onClick={() => setActiveModal(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>✖</button>
+            </div>
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+               <p style={{ color: 'var(--text-muted)' }}>
+                  Sizda {stats.orderCount} ta tasdiq kutilayotgan buyurtma mavjud. Iltimos ularni Buyurtmalar (Orders) sahifasida ko'rib chiqing.
+               </p>
+               <button className="btn btn-primary" onClick={() => { setActiveModal(null); window.location.href='/orders'; }} style={{ marginTop: '15px' }}>
+                 Buyurtmalar sahifasiga o'tish
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -137,4 +137,23 @@ module.exports = async function (fastify, opts) {
 
     return result
   })
+
+  // Reject Payment
+  fastify.post('/:id/reject', async (request, reply) => {
+    if (request.user.role !== 'ADMIN') return reply.code(403).send({ error: 'Ruxsat yo\'q' })
+    const { id } = request.params
+    const adminName = request.user.username
+
+    const payment = await fastify.prisma.payment.findUnique({
+      where: { id }
+    })
+    if (!payment || payment.status !== 'WAITING_APPROVAL') return reply.code(400).send({ error: 'Tasdiqlash kutilmayapti' })
+
+    const updated = await fastify.prisma.payment.update({
+      where: { id },
+      data: { status: 'REJECTED', approvedBy: adminName, approvedAt: new Date() }
+    })
+
+    return updated
+  })
 }
