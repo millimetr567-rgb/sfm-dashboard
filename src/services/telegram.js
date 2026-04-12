@@ -220,55 +220,61 @@ class TelegramService {
 
   async generatePaymentPDF(payment) {
     return new Promise((resolve) => {
-      const doc = new PDFDocument({ margin: 40, size: 'A4' });
-      const buffers = [];
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      try {
+        const doc = new PDFDocument({ margin: 40, size: 'A4' });
+        const buffers = [];
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      doc.rect(0, 0, 600, 100).fill('#10b981');
-      doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('SFM MOBILE', 40, 35);
-      doc.fontSize(10).font('Helvetica').text('TIZIM ORQALI GENERATSIYA QILINGAN TO\'LOV CHEKI', 40, 65);
-      
-      doc.fillColor('#000000').fontSize(18).font('Helvetica-Bold').text('TO\'LOV KVITANSIYASI', 40, 120);
-      doc.fontSize(10).font('Helvetica').text(`ID: #${payment.id.substring(0,8)}`, 40, 145);
-      
-      doc.rect(40, 165, 515, 60).stroke('#eeeeee');
-      doc.fontSize(9).fillColor('#666666').text('MIJOZ MA\'LUMOTLARI', 50, 175);
-      doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold').text(payment.client?.name || 'Noma\'lum', 50, 190);
-      
-      doc.fontSize(9).fillColor('#666666').text('SANA', 400, 175);
-      doc.fontSize(10).fillColor('#000000').text(this.formatDate(payment.createdAt || payment.date || new Date()), 400, 190);
-      doc.fontSize(9).fillColor('#666666').text('TO\'LOV USULI', 400, 205);
-      doc.fontSize(10).fillColor('#000000').text(payment.paymentMethod || 'Kalkulyator', 480, 205);
+        doc.rect(0, 0, 600, 100).fill('#10b981');
+        doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('SFM MOBILE', 40, 35);
+        doc.fontSize(10).font('Helvetica').text('TIZIM ORQALI GENERATSIYA QILINGAN TO\'LOV CHEKI', 40, 65);
+        
+        doc.fillColor('#000000').fontSize(18).font('Helvetica-Bold').text('TO\'LOV KVITANSIYASI', 40, 120);
+        doc.fontSize(10).font('Helvetica').text(`ID: #${payment.id.substring(0,8)}`, 40, 145);
+        
+        doc.rect(40, 165, 515, 60).stroke('#eeeeee');
+        doc.fontSize(9).fillColor('#666666').text('MIJOZ MA\'LUMOTLARI', 50, 175);
+        doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold').text(payment.client?.name || 'Noma\'lum', 50, 190);
+        
+        doc.fontSize(9).fillColor('#666666').text('SANA', 400, 175);
+        doc.fontSize(10).fillColor('#000000').text(this.formatDate(payment.createdAt || payment.date || new Date()), 400, 190);
+        doc.fontSize(9).fillColor('#666666').text('TO\'LOV USULI', 400, 205);
+        doc.fontSize(10).fillColor('#000000').text(payment.paymentMethod || 'Kalkulyator', 480, 205);
 
-      let y = 250;
-      doc.fontSize(14).font('Helvetica-Bold').text('Tafsilotlar:', 40, y);
-      y += 25;
-      
-      const details = [
-          ['Umumiy To\'lov Summasi ($)', payment.amount],
-      ];
-      if (payment.cashAmount > 0) details.push(['Naqd pul so\'m', payment.cashAmount]);
-      if (payment.terminalAmount > 0) details.push(['Terminal so\'m', payment.terminalAmount]);
-      if (payment.clickAmount > 0) details.push(['Click/Payme', payment.clickAmount]);
-      if (payment.bankAmount > 0) details.push(['Hisob raqamidan so\'m', payment.bankAmount]);
-      if (payment.usdAmount > 0) details.push(['Naqd USD ($)', payment.usdAmount]);
-      
-      details.forEach(([lbl, val]) => {
-          doc.fontSize(12).font('Helvetica').fillColor('#333333').text(lbl, 40, y);
-          doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text(val.toLocaleString(), 350, y, { width: 200, align: 'right' });
-          doc.moveTo(40, y + 16).lineTo(555, y + 16).stroke('#eeeeee');
-          y += 25;
-      });
+        let y = 250;
+        doc.fontSize(14).font('Helvetica-Bold').text('Tafsilotlar:', 40, y);
+        y += 25;
+        
+        const details = [
+            ['Umumiy To\'lov Summasi ($)', payment.amount || 0],
+        ];
+        if (payment.cashAmount > 0) details.push(['Naqd pul so\'m', payment.cashAmount]);
+        if (payment.terminalAmount > 0) details.push(['Terminal so\'m', payment.terminalAmount]);
+        if (payment.clickAmount > 0) details.push(['Click/Payme', payment.clickAmount]);
+        if (payment.bankAmount > 0) details.push(['Hisob raqamidan so\'m', payment.bankAmount]);
+        if (payment.usdAmount > 0) details.push(['Naqd USD ($)', payment.usdAmount]);
+        
+        details.forEach(([lbl, val]) => {
+            doc.fontSize(12).font('Helvetica').fillColor('#333333').text(lbl, 40, y);
+            doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text(Number(val).toLocaleString(), 350, y, { width: 200, align: 'right' });
+            doc.moveTo(40, y + 16).lineTo(555, y + 16).stroke('#eeeeee');
+            y += 25;
+        });
 
-      y += 40;
-      doc.fontSize(14).font('Helvetica-Bold').text('UMUMIY JAMI ($):', 250, y);
-      doc.fontSize(16).fillColor('#10b981').text(`$${payment.amount.toLocaleString()}`, 450, y, { width: 100, align: 'right' });
-      
-      y += 40;
-      doc.fontSize(8).fillColor('#999999').font('Helvetica').text('Ushbu hujjat elektron shaklda yaratilgan. Tasdiqlash bot orqali amalga oshiriladi.', 40, y, { align: 'center', width: 515 });
+        y += 40;
+        doc.fontSize(14).font('Helvetica-Bold').text('UMUMIY JAMI ($):', 250, y);
+        const amountDisplay = payment.amount ? payment.amount.toLocaleString() : '0';
+        doc.fontSize(16).fillColor('#10b981').text(`$${amountDisplay}`, 450, y, { width: 100, align: 'right' });
+        
+        y += 40;
+        doc.fontSize(8).fillColor('#999999').font('Helvetica').text('Ushbu hujjat elektron shaklda yaratilgan. Tasdiqlash bot orqali amalga oshiriladi.', 40, y, { align: 'center', width: 515 });
 
-      doc.end();
+        doc.end();
+      } catch (e) {
+        console.error('PDF Generation error:', e);
+        resolve(null);
+      }
     });
   }
 

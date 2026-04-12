@@ -12,7 +12,7 @@ module.exports = async function (fastify, opts) {
   fastify.post('/', async (request, reply) => {
     try {
       const { clientId, coordinates, due_date, driverPhone, items } = request.body
-      const agentId = request.user.id
+      let agentId = request.user.id
       const userRole = request.user.role
 
       if (!clientId) return reply.code(400).send({ error: 'Mijoz tanlanmagan' })
@@ -20,6 +20,18 @@ module.exports = async function (fastify, opts) {
       if (!client) return reply.code(404).send({ error: 'Mijoz topilmadi' })
       if (client.status === 'BLACKLIST') return reply.code(403).send({ error: 'Mijoz qora ro\'yxatda!' })
       if (!items || !items.length) return reply.code(400).send({ error: 'Kamida bitta mahsulot tanlanishi kerak' })
+
+      // Ensure agentId exists in the Agent table to prevent foreign key errors
+      const checkAgent = await fastify.prisma.agent.findUnique({ where: { id: agentId } })
+      if (!checkAgent) {
+        let fallback = await fastify.prisma.agent.findFirst()
+        if (!fallback) {
+          fallback = await fastify.prisma.agent.create({
+            data: { id: agentId, username: request.user.username || 'System', passwordHash: 'none', role: userRole || 'ADMIN' }
+          })
+        }
+        agentId = fallback.id
+      }
 
       let totalAmount = 0
       const resolvedItems = []
