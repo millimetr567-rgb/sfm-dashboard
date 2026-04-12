@@ -597,61 +597,62 @@ export default function NewOrder() {
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .slice(0, 30) // Show last 30 activities
                 .map((item, idx) => (
-                  <div key={idx} style={{ 
-                    background: 'rgba(255,255,255,0.03)', 
-                    borderRadius: '12px', 
-                    padding: '12px',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <div style={{ 
-                        width: '36px', 
-                        height: '36px', 
-                        borderRadius: '10px', 
-                        background: item._type === 'order' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {item._type === 'order' ? <Package size={18} color="#ff9800"/> : <Wallet size={18} color="#4caf50"/>}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                          {item._type === 'order' ? `Buyurtma #${item.orderNumber || item.id.substring(0,5)}` : 'To\'lov qabul qilindi'}
+                  <div key={idx} style={{ marginBottom: '10px' }}>
+                    <div style={{ 
+                      background: 'rgba(255,255,255,0.03)', 
+                      borderRadius: '12px', 
+                      padding: '12px',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={{ 
+                          width: '36px', 
+                          height: '36px', 
+                          borderRadius: '10px', 
+                          background: item._type === 'order' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {item._type === 'order' ? <Package size={18} color="#ff9800"/> : <Wallet size={18} color="#4caf50"/>}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                          {new Date(item.date).toLocaleString()}
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                            {item._type === 'order' ? `Buyurtma #${item.orderNumber || item.id.substring(0,5)}` : 'To\'lov qabul qilindi'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            {new Date(item.date).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ 
+                          fontWeight: 800, 
+                          fontSize: '1rem', 
+                          color: item.status === 'PAID' || item._type === 'payment' ? '#00e676' : '#ff4d4d' 
+                        }}>
+                          {item._type === 'order' ? (item.status === 'PAID' ? '• ' : '+') : '-'}${Number(item.amount).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#555' }}>
+                          {item.paymentMethod || item.status || ''}
                         </div>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ 
-                        fontWeight: 800, 
-                        fontSize: '1rem', 
-                        color: item.status === 'PAID' || item._type === 'payment' ? '#00e676' : '#ff4d4d' 
-                      }}>
-                        {item._type === 'order' ? (item.status === 'PAID' ? '• ' : '+') : '-'}${Number(item.amount).toLocaleString()}
+                    {item._type === 'order' && (
+                      <div style={{ padding: '0 12px 12px 12px', marginTop: '-6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px' }}>
+                          <strong>Mahsulotlar:</strong>
+                          <ul style={{ margin: '4px 0 0 15px', padding: 0 }}>
+                            {item.items?.map(it => (
+                              <li key={it.id}>{it.product?.name || 'Mahsulot'} x {it.quantity}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#555' }}>
-                        {item.paymentMethod || item.status || ''}
-                      </div>
-                    </div>
-                  </div>
-                  {item._type === 'order' && (
-                    <div style={{ padding: '0 12px 12px 12px', marginTop: '-6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px' }}>
-                        <strong>Mahsulotlar:</strong>
-                        <ul style={{ margin: '4px 0 0 15px', padding: 0 }}>
-                          {item.items?.map(it => (
-                            <li key={it.id}>{it.product?.name || 'Mahsulot'} x {it.quantity}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
+                    )}
                   </div>
                 ))}
               </div>
