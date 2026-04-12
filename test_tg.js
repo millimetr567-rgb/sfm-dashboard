@@ -1,1 +1,1 @@
-const fs = require("fs"); let data = fs.readFileSync("d:/Agent/src/services/telegram.js", "utf8"); data = data.replaceAll("-5180118070", "-1003761341472"); fs.writeFileSync("d:/Agent/src/services/telegram.js", data);
+const TelegramBot = require("node-telegram-bot-api"); const bot = new TelegramBot("8758860211:AAH0P6sZrILvsCAK4lWMc5WGryygvQl1LAg"); bot.sendMessage("-1003761341472", "Tizim ulandi").then(() => console.log("Success")).catch(e => console.log("Error:", e.message));
