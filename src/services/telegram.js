@@ -42,11 +42,11 @@ class TelegramService {
   }
 
   async getChatIds(extraId = null) {
-    if (!this.fastify) return ['-5180118070'];
+    if (!this.fastify) return ['-1003761341472'];
     try {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let ids = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id && String(id).trim() !== '');
-        ids.push('-5180118070'); // ALWAYS FORCED ROUTING
+        ids.push('-1003761341472'); // ALWAYS FORCED ROUTING
 
         if (extraId) ids.push(extraId);
         
@@ -54,7 +54,7 @@ class TelegramService {
         return [...new Set(ids.map(id => String(id).trim()))];
     } catch (e) {
         console.error("[Telegram] getChatIds Error:", e.message);
-        return ['-5180118070'];
+        return ['-1003761341472'];
     }
   }
 
@@ -149,7 +149,7 @@ class TelegramService {
     try {
         const settings = await this.fastify.prisma.settings.findUnique({ where: { id: 'singleton' } });
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
-        chatIds.push('-5180118070'); // ALWAYS FORCED ROUTING
+        chatIds.push('-1003761341472'); // ALWAYS FORCED ROUTING
         
         // Ensure all are unique
         chatIds = [...new Set(chatIds.map(id => String(id).trim()))];
@@ -166,7 +166,7 @@ class TelegramService {
     if (!this.fastify || !this.bot) return;
     try {
         const chatIds = await this.getChatIds(c.telegramGroupId);
-        if (chatIds.indexOf('-5180118070') === -1) chatIds.push('-5180118070');
+        if (chatIds.indexOf('-1003761341472') === -1) chatIds.push('-1003761341472');
         if (chatIds.length === 0) return;
 
         const msg = `💸 *To'lov muvaffaqiyatli qabul qilindi!*\n\n👤 Mijoz: ${this.esc(c.name)}\n💰 Summa: ${p.amount} $\n💳 Usul: ${p.paymentMethod}\n✅ Holat: TASDIQLANDI`;
@@ -189,7 +189,7 @@ class TelegramService {
         if (!payment) return;
 
         const chatIds = await this.getChatIds(payment.client.telegramGroupId);
-        if (chatIds.indexOf('-5180118070') === -1) chatIds.push('-5180118070');
+        if (chatIds.indexOf('-1003761341472') === -1) chatIds.push('-1003761341472');
         if (chatIds.length === 0) return;
 
         const opts = {
@@ -360,7 +360,7 @@ class TelegramService {
         let chatIds = [settings?.chatId1, settings?.chatId2, settings?.chatId3].filter(id => id);
         
         // Force the main target group
-        if (chatIds.indexOf('-5180118070') === -1) chatIds.push('-5180118070');
+        if (chatIds.indexOf('-1003761341472') === -1) chatIds.push('-1003761341472');
         if (order.client?.telegramGroupId && chatIds.indexOf(order.client.telegramGroupId) === -1) chatIds.push(order.client.telegramGroupId);
 
         console.log(`[Telegram] Target Chat IDs: ${chatIds.join(', ')}`);

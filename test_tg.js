@@ -1,0 +1,1 @@
+const fs = require("fs"); let data = fs.readFileSync("d:/Agent/src/services/telegram.js", "utf8"); data = data.replaceAll("-5180118070", "-1003761341472"); fs.writeFileSync("d:/Agent/src/services/telegram.js", data);
