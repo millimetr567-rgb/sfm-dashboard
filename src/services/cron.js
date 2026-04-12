@@ -6,14 +6,13 @@ class CronService {
   }
 
   init() {
-    // Run daily at midnight 0 0 * * *
-    // For demo purposes, we will just set up the schedule but let it be manually triggerable
-    cron.schedule('0 0 * * *', async () => {
+    // Run daily at 23:55 Tashkent time
+    cron.schedule('55 23 * * *', async () => {
       console.log('Running daily cron jobs...')
       await this.processOverdueOrders()
       await this.checkCreditLimits()
       await this.sendDailyReports()
-    })
+    }, { timezone: 'Asia/Tashkent' })
   }
 
   async processOverdueOrders() {
